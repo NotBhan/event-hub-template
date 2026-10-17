@@ -1,6 +1,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { getAuth } from '@/lib/auth';
 import { resolveMembership } from '@/lib/auth/membership';
+import { errorChainMessage } from '@/lib/db/errors';
 import { tryServerEnv } from '@/lib/security/env';
 import { configurationErrorResponse } from '@/lib/security/config-error';
 
@@ -68,7 +69,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     console.error('Session resolution failed', error);
   }
 
-  const response = await next();
+  const response = await render(next, context.url.pathname);
 
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -104,3 +105,21 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   return response;
 });
+
+/**
+ * Renders the page, logging the full failure before it becomes a 500.
+ *
+ * Astro's own 500 log prints the error stack, and a stack carries only the
+ * outermost message. Every database failure arrives as Drizzle's
+ * "Failed query: <sql>" with the PostgreSQL error — and therefore the actual
+ * reason — one or more `cause` links further down, so the one line that explains
+ * the outage is the line that never reaches the log. Walking the chain keeps it.
+ */
+async function render(next: () => Promise<Response>, pathname: string): Promise<Response> {
+  try {
+    return await next();
+  } catch (error) {
+    console.error(`Request failed: ${pathname} — ${errorChainMessage(error)}`);
+    throw error;
+  }
+}

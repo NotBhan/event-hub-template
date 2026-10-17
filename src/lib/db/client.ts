@@ -18,11 +18,29 @@ export type Sql = ReturnType<typeof createDatabase>['sql'];
 
 let instance: { db: Database; sql: Sql } | undefined;
 
+/** Vercel and Lambda both serve requests from short-lived function instances. */
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
 function createDatabase(connectionString: string) {
   const sql = postgres(connectionString, {
-    max: Number(process.env.DATABASE_POOL_SIZE ?? 10),
+    // A serverless instance is one client among many, and the pooled endpoint
+    // behind it is already multiplexing. A ten-connection pool per instance
+    // multiplies into the pooler's own limit and fails with "too many clients".
+    max: Number(process.env.DATABASE_POOL_SIZE ?? (isServerless ? 1 : 10)),
     idle_timeout: 30,
     connect_timeout: 10,
+    /**
+     * Prepared statements are unusable through a transaction-mode pooler, which
+     * is what a pooled serverless URL is. Postgres.js prepares each query under a
+     * random per-connection name and reuses it for the life of that connection,
+     * but a pooled connection is not pinned to one server backend: the next
+     * transaction can land on a backend where the statement was never prepared.
+     * The server then rejects the query ("prepared statement ... does not exist"),
+     * Drizzle reports it as a failed query with no SQL error of its own, and the
+     * page 500s intermittently — depending on which backend the pooler picked.
+     * Docker deployments hold direct connections, where preparing is a win.
+     */
+    prepare: !isServerless,
     // Postgres.js would otherwise log notices; keep the console clean.
     onnotice: () => {},
   });
