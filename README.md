@@ -384,6 +384,10 @@ which is the most common way this project fails on Vercel.
 
 Notes specific to Vercel:
 
+- **If every page returns 500**, the configuration is incomplete. The response
+  names the offending variables (never their values) and lists what is required;
+  `/api/health` returns the same information as JSON. Both are safe to open on a
+  broken deployment.
 - `NODE_ENV` is `production`, so the simulated provider is rejected unless
   `ALLOW_SIMULATED_PAYMENTS=true`. That is deliberate: a demo must say so.
 - Vercel preview deployments get their own hostname. The auth layer trusts

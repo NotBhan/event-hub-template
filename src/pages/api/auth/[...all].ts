@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { auth } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 
 /**
  * Better Auth catch-all handler: sign-in, sign-up, session, organization and
@@ -14,5 +14,5 @@ export const ALL: APIRoute = async (ctx) => {
     ctx.request.headers.set('x-forwarded-for', forwardedFor);
   }
 
-  return auth.handler(ctx.request);
+  return getAuth().handler(ctx.request);
 };

@@ -135,25 +135,60 @@ const envSchema = z
 
 export type ServerEnv = z.infer<typeof envSchema>;
 
-let cached: ServerEnv | undefined;
+/** A single configuration problem. Holds names and reasons, never values. */
+export interface EnvIssue {
+  variable: string;
+  message: string;
+}
 
-/** Returns validated server environment variables. Throws on misconfiguration. */
-export function serverEnv(): ServerEnv {
-  if (cached) return cached;
+export type EnvResult = { ok: true; env: ServerEnv } | { ok: false; issues: EnvIssue[] };
+
+let cached: ServerEnv | undefined;
+let cachedFailure: EnvIssue[] | undefined;
+
+/**
+ * Validates configuration without throwing.
+ *
+ * A deployment with a missing variable should say *which* variable is missing.
+ * Throwing during module evaluation produces a blank 500 with nothing in the
+ * response, which is the least useful possible outcome on a hosted platform where
+ * the operator may not have log access to hand.
+ */
+export function tryServerEnv(): EnvResult {
+  if (cached) return { ok: true, env: cached };
+  if (cachedFailure) return { ok: false, issues: cachedFailure };
 
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
-    const details = parsed.error.issues
-      .map((issue) => `  - ${issue.path.join('.') || '(root)'}: ${issue.message}`)
-      .join('\n');
-    throw new Error(
-      `Invalid environment configuration:\n${details}\n\nSee .env.example for the expected values.`,
-    );
+    cachedFailure = parsed.error.issues.map((issue) => ({
+      variable: issue.path.join('.') || '(root)',
+      message: issue.message,
+    }));
+    return { ok: false, issues: cachedFailure };
   }
 
   cached = parsed.data;
-  return cached;
+  return { ok: true, env: cached };
+}
+
+/** Test hook: clears memoised validation so it can be re-run against a changed environment. */
+export function resetServerEnvCache(): void {
+  cached = undefined;
+  cachedFailure = undefined;
+}
+
+/** Returns validated configuration, or throws with the full list of problems. */
+export function serverEnv(): ServerEnv {
+  const result = tryServerEnv();
+  if (result.ok) return result.env;
+
+  const details = result.issues
+    .map((issue) => `  - ${issue.variable}: ${issue.message}`)
+    .join('\n');
+  throw new Error(
+    `Invalid environment configuration:\n${details}\n\nSee .env.example for the expected values.`,
+  );
 }
 
 /** True when running the clearly labelled simulated gateway for demos. */

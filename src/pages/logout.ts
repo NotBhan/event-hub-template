@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { auth } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 
 /**
  * Sign out.
@@ -16,7 +16,7 @@ export const POST: APIRoute = async (ctx) => {
   const headers = new Headers({ location: '/' });
 
   try {
-    const response = await auth.api.signOut({
+    const response = await getAuth().api.signOut({
       headers: ctx.request.headers,
       asResponse: true,
     });

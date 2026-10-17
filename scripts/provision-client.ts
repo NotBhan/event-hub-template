@@ -20,7 +20,7 @@ import '../src/lib/security/load-env';
 import { eq } from 'drizzle-orm';
 import { db, closeDatabase } from '../src/lib/db/client';
 import { member, organization, organizationSettings, user } from '../src/lib/db/schema';
-import { auth } from '../src/lib/auth';
+import { getAuth } from '../src/lib/auth';
 import { serverEnv } from '../src/lib/security/env';
 import { site } from '../src/config/site';
 
@@ -131,7 +131,7 @@ async function main(): Promise<void> {
      * the library's own algorithm. Writing the hash by hand would risk creating an
      * account that cannot sign in.
      */
-    const result = await auth.api.signUpEmail({
+    const result = await getAuth().api.signUpEmail({
       body: {
         email: options.email.toLowerCase(),
         password: options.password,

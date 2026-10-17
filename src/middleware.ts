@@ -1,25 +1,58 @@
 import { defineMiddleware } from 'astro:middleware';
-import { auth } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { resolveMembership } from '@/lib/auth/membership';
-import { serverEnv } from '@/lib/security/env';
-
-const env = serverEnv();
-const isProduction = env.NODE_ENV === 'production';
+import { tryServerEnv } from '@/lib/security/env';
+import { configurationErrorResponse } from '@/lib/security/config-error';
 
 /**
  * Loads the session and organization membership onto `Astro.locals`, then applies
  * baseline security headers.
  *
- * Session loading is read-only: middleware never mutates data, so a page that
- * renders but is not authorized still fails inside the endpoint or page guard.
+ * Configuration is validated here, per request, rather than at import time. A
+ * deployment with a missing variable then renders a page naming that variable
+ * instead of a blank 500 — which is the difference between a five-minute fix and
+ * a support thread. Nothing sensitive is shown: names and reasons only.
+ *
+ * Session loading is read-only; pages and endpoints still enforce their own
+ * authorization.
  */
 export const onRequest = defineMiddleware(async (context, next) => {
+  const config = tryServerEnv();
+
+  if (!config.ok) {
+    /**
+     * API routes answer in JSON, because their callers are machines: a load
+     * balancer, a payment provider's webhook retry, an uptime monitor. The health
+     * endpoint reports configuration itself, so it is left alone.
+     */
+    if (context.url.pathname.startsWith('/api/') && context.url.pathname !== '/api/health') {
+      return new Response(
+        JSON.stringify({
+          status: 'misconfigured',
+          issues: config.issues.map((issue) => issue.variable),
+        }),
+        {
+          status: 503,
+          headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+        },
+      );
+    }
+
+    if (context.url.pathname === '/api/health') {
+      return next();
+    }
+
+    return configurationErrorResponse(config.issues);
+  }
+
+  const isProduction = config.env.NODE_ENV === 'production';
+
   context.locals.user = null;
   context.locals.session = null;
   context.locals.membership = null;
 
   try {
-    const result = await auth.api.getSession({ headers: context.request.headers });
+    const result = await getAuth().api.getSession({ headers: context.request.headers });
 
     if (result) {
       context.locals.user = result.user;

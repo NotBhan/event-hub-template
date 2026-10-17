@@ -17,7 +17,7 @@ import {
 import { createTicketType, deleteTicketType, updateTicketType } from '@/features/inventory/service';
 import { createOrder } from '@/features/orders/service';
 import { requestRefund as requestRefundService } from '@/features/refunds/service';
-import { auth } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { roleHasPermission, type PermissionRequest } from '@/lib/permissions/guards';
 import { isOrganizationRole } from '@/lib/permissions';
 import { recordAudit } from '@/features/audit/service';
@@ -543,7 +543,7 @@ export const server = {
         // `assignableRoles` already excludes ownership and the plain attendee
         // role, so nothing further to narrow here.
 
-        await auth.api.createInvitation({
+        await getAuth().api.createInvitation({
           headers: context.request.headers,
           body: {
             email: input.email.toLowerCase(),
