@@ -255,7 +255,12 @@ export async function voidTicket(tx: DbExecutor, input: VoidTicketInput): Promis
 /** Voids every ticket covered by a confirmed refund. */
 export async function voidTicketsForRefund(
   tx: DbExecutor,
-  input: { ticketIds: string[]; reason: string; actorUserId?: string | null; organizationId?: string | null },
+  input: {
+    ticketIds: string[];
+    reason: string;
+    actorUserId?: string | null;
+    organizationId?: string | null;
+  },
 ): Promise<{ voided: number; skipped: number }> {
   let voided = 0;
   let skipped = 0;

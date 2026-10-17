@@ -53,8 +53,7 @@ for (const size of [
     // Also disable smooth scrolling: successive scrollTo calls would otherwise
     // keep cancelling one another and never actually reach the sections.
     await page.addStyleTag({
-      content:
-        'astro-dev-toolbar{display:none!important} html{scroll-behavior:auto!important}',
+      content: 'astro-dev-toolbar{display:none!important} html{scroll-behavior:auto!important}',
     });
 
     // Walk the page so every scroll trigger fires.

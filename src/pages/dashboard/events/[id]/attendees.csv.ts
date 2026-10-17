@@ -73,7 +73,9 @@ export const GET: APIRoute = async (ctx) => {
         row.phone ?? '',
         row.ticketTypeName,
         row.ticketReference ?? '',
-        row.ticketStatus ? (TICKET_STATUS_LABELS[row.ticketStatus] ?? row.ticketStatus) : 'Not issued',
+        row.ticketStatus
+          ? (TICKET_STATUS_LABELS[row.ticketStatus] ?? row.ticketStatus)
+          : 'Not issued',
         row.orderReference,
         ORDER_STATUS_LABELS[row.orderStatus] ?? row.orderStatus,
         formatMoney(row.orderTotalMinor, row.orderCurrency),

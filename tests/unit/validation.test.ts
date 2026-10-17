@@ -107,13 +107,17 @@ describe('field validation', () => {
     const missingVenue = eventFormSchema.safeParse({ ...base, venueName: '' });
     expect(missingVenue.success).toBe(false);
     if (!missingVenue.success) {
-      expect(missingVenue.error.issues.some((issue) => issue.path.includes('venueName'))).toBe(true);
+      expect(missingVenue.error.issues.some((issue) => issue.path.includes('venueName'))).toBe(
+        true,
+      );
     }
 
     const onlineWithoutPlatform = eventFormSchema.safeParse({ ...base, format: 'online' });
     expect(onlineWithoutPlatform.success).toBe(false);
     if (!onlineWithoutPlatform.success) {
-      expect(onlineWithoutPlatform.error.issues.some((issue) => issue.path.includes('accessPlatform'))).toBe(true);
+      expect(
+        onlineWithoutPlatform.error.issues.some((issue) => issue.path.includes('accessPlatform')),
+      ).toBe(true);
     }
   });
 

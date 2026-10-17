@@ -13,7 +13,10 @@ import PublicLayout from '@/layouts/PublicLayout.astro';
  */
 const reason = Astro.url.searchParams.get('reason');
 
-const messages: Record<string, { title: string; body: string; action?: { href: string; label: string } }> = {
+const messages: Record<
+  string,
+  { title: string; body: string; action?: { href: string; label: string } }
+> = {
   'not-a-member': {
     title: 'No organizer access',
     body: 'Your account is not part of an organization on this deployment. An owner has to invite you as staff before you can open the dashboard.',
@@ -34,14 +37,14 @@ const message = messages[reason ?? ''] ?? messages['not-an-organizer']!;
     <h1 class="text-2xl font-semibold tracking-tight">{message.title}</h1>
     <p class="mt-3 text-sm text-[var(--color-ink-muted)]">{message.body}</p>
     <div class="mt-8 flex flex-wrap justify-center gap-3">
-      {
-        message.action && (
-          <a href={message.action.href} class="btn btn-primary">
-            {message.action.label}
-          </a>
-        )
-      }
-      <a href="/events" class="btn btn-secondary">Browse events</a>
+      {message.action && (
+        <a href={message.action.href} class="btn btn-primary">
+          {message.action.label}
+        </a>
+      )}
+      <a href="/events" class="btn btn-secondary">
+        Browse events
+      </a>
     </div>
   </div>
 </PublicLayout>

@@ -1,8 +1,5 @@
 import type { APIContext } from 'astro';
-import {
-  ForbiddenError,
-  UnauthorizedError,
-} from '@/lib/security/errors';
+import { ForbiddenError, UnauthorizedError } from '@/lib/security/errors';
 import { roles, isOrganizerRole, type OrganizationRole, type PermissionResource } from './index';
 
 /**
@@ -63,10 +60,7 @@ export function requireOrganizer(context: Pick<APIContext, 'locals'>) {
  * separate check performed by the service that loads the record — see
  * `assertEventAccess`.
  */
-export function requirePermission(
-  context: Pick<APIContext, 'locals'>,
-  request: PermissionRequest,
-) {
+export function requirePermission(context: Pick<APIContext, 'locals'>, request: PermissionRequest) {
   const membership = requireOrganizer(context);
 
   if (!roleHasPermission(membership.role, request)) {

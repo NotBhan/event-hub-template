@@ -129,7 +129,12 @@ describe('check-in', () => {
   });
 
   it('rejects a malformed credential without touching the database lookup', async () => {
-    for (const token of ['', 'nonsense', 't1.not-a-uuid.signature', 't2.' + 'a'.repeat(36) + '.sig']) {
+    for (const token of [
+      '',
+      'nonsense',
+      't1.not-a-uuid.signature',
+      't2.' + 'a'.repeat(36) + '.sig',
+    ]) {
       const result = await scanTicket({
         eventId: event.eventId,
         token,
@@ -216,7 +221,11 @@ describe('check-in', () => {
     const [issued] = await issueTickets(event, 1);
     const token = tokenForTicket(issued!.ticket.id);
 
-    const [row] = await db().select().from(tickets).where(eq(tickets.id, issued!.ticket.id)).limit(1);
+    const [row] = await db()
+      .select()
+      .from(tickets)
+      .where(eq(tickets.id, issued!.ticket.id))
+      .limit(1);
 
     expect(row?.qrTokenHash).toBe(hashQrToken(token));
     expect(row?.qrTokenHash).toMatch(/^[0-9a-f]{64}$/);

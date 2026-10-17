@@ -76,7 +76,10 @@ function parseEnv(contents: string): Map<string, string> {
     const separator = line.indexOf('=');
     if (separator === -1) continue;
 
-    const key = line.slice(0, separator).replace(/^export\s+/, '').trim();
+    const key = line
+      .slice(0, separator)
+      .replace(/^export\s+/, '')
+      .trim();
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
 
     let value = line.slice(separator + 1).trim();

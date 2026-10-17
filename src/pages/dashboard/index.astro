@@ -64,160 +64,168 @@ const canSeeMoney = can(Astro, { payment: ['read'] });
           {events.filter((row) => row.event.status === 'published').length}
         </span>
       </p>
-      <p class="mt-1 text-xs text-[var(--color-ink-muted)]">
-        {upcoming.length} still to come
-      </p>
+      <p class="mt-1 text-xs text-[var(--color-ink-muted)]">{upcoming.length} still to come</p>
     </div>
 
     <div class="card p-4">
       <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
         Tickets sold
       </p>
-      <p class="mt-1.5 text-2xl font-semibold" data-counter={totalSold}>{totalSold}</p>
+      <p class="mt-1.5 text-2xl font-semibold" data-counter={totalSold}>
+        {totalSold}
+      </p>
       <p class="mt-1 text-xs text-[var(--color-ink-muted)]">Across all events</p>
     </div>
 
-    {
-      canSeeMoney && (
-        <div class="card p-4">
-          <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
-            Confirmed revenue
-          </p>
-          <p class="mt-1.5 text-2xl font-semibold">{formatMoney(totalRevenue, currency)}</p>
-          <p class="mt-1 text-xs text-[var(--color-ink-muted)]">Confirmed orders only</p>
-        </div>
-      )
-    }
+    {canSeeMoney && (
+      <div class="card p-4">
+        <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
+          Confirmed revenue
+        </p>
+        <p class="mt-1.5 text-2xl font-semibold">{formatMoney(totalRevenue, currency)}</p>
+        <p class="mt-1 text-xs text-[var(--color-ink-muted)]">Confirmed orders only</p>
+      </div>
+    )}
 
     <div class="card p-4">
       <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
         Awaiting payment
       </p>
-      <p class="mt-1.5 text-2xl font-semibold" data-counter={awaitingPayment.length}>{awaitingPayment.length}</p>
-      <p class="mt-1 text-xs text-[var(--color-ink-muted)]">
-        Stock is held, not sold
+      <p class="mt-1.5 text-2xl font-semibold" data-counter={awaitingPayment.length}>
+        {awaitingPayment.length}
       </p>
+      <p class="mt-1 text-xs text-[var(--color-ink-muted)]">Stock is held, not sold</p>
     </div>
   </section>
 
-  {
-    pendingRefunds.length > 0 && (
-      <section class="mt-6 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 p-4">
-        <h2 class="text-sm font-semibold text-amber-900">
-          {pendingRefunds.length} refund{pendingRefunds.length === 1 ? '' : 's'} pending with the provider
-        </h2>
-        <p class="mt-1 text-sm text-amber-900">
-          These have been submitted and are awaiting confirmation.
-        </p>
-        <a href="/dashboard/refunds" class="btn btn-secondary btn-sm mt-3">Review refunds</a>
-      </section>
-    )
-  }
+  {pendingRefunds.length > 0 && (
+    <section class="mt-6 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 p-4">
+      <h2 class="text-sm font-semibold text-amber-900">
+        {pendingRefunds.length} refund{pendingRefunds.length === 1 ? '' : 's'} pending with the
+        provider
+      </h2>
+      <p class="mt-1 text-sm text-amber-900">
+        These have been submitted and are awaiting confirmation.
+      </p>
+      <a href="/dashboard/refunds" class="btn btn-secondary btn-sm mt-3">
+        Review refunds
+      </a>
+    </section>
+  )}
 
   <section class="mt-8">
     <div class="mb-3 flex items-end justify-between gap-3">
       <h2 class="text-lg font-semibold tracking-tight">Upcoming events</h2>
-      <a href="/dashboard/events" class="text-sm font-medium text-[var(--color-brand)] hover:underline">
+      <a
+        href="/dashboard/events"
+        class="text-sm font-medium text-[var(--color-brand)] hover:underline"
+      >
         All events
       </a>
     </div>
 
-    {
-      upcoming.length === 0 ? (
-        <p class="card p-6 text-sm text-[var(--color-ink-muted)]">
-          No published events are scheduled. Create one to get started.
-        </p>
-      ) : (
-        <div class="card overflow-x-auto">
-          <table class="data-table">
-            <thead>
+    {upcoming.length === 0 ? (
+      <p class="card p-6 text-sm text-[var(--color-ink-muted)]">
+        No published events are scheduled. Create one to get started.
+      </p>
+    ) : (
+      <div class="card overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Event</th>
+              <th scope="col">Starts</th>
+              <th scope="col" class="text-right">
+                Sold
+              </th>
+              <th scope="col" class="text-right">
+                Registrations
+              </th>
+              {canSeeMoney && (
+                <th scope="col" class="text-right">
+                  Revenue
+                </th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {upcoming.map((row) => (
               <tr>
-                <th scope="col">Event</th>
-                <th scope="col">Starts</th>
-                <th scope="col" class="text-right">Sold</th>
-                <th scope="col" class="text-right">Registrations</th>
-                {canSeeMoney && <th scope="col" class="text-right">Revenue</th>}
+                <td>
+                  <a
+                    href={`/dashboard/events/${row.event.id}`}
+                    class="font-medium hover:text-[var(--color-brand)]"
+                  >
+                    {row.event.title}
+                  </a>
+                  <p class="text-xs text-[var(--color-ink-muted)]">
+                    <StatusBadge
+                      label={EVENT_STATUS_LABELS[row.event.status] ?? row.event.status}
+                      status={row.event.status}
+                    />
+                  </p>
+                </td>
+                <td class="text-[var(--color-ink-muted)]">
+                  {formatCompactWindow(row.event.startsAt, row.event.timezone)}
+                </td>
+                <td class="text-right">
+                  {row.sold}
+                  <span class="text-[var(--color-ink-muted)]"> / {row.capacity}</span>
+                </td>
+                <td class="text-right">{row.orders}</td>
+                {canSeeMoney && (
+                  <td class="text-right">{formatMoney(row.revenueMinor, currency)}</td>
+                )}
               </tr>
-            </thead>
-            <tbody>
-              {upcoming.map((row) => (
-                <tr>
-                  <td>
-                    <a
-                      href={`/dashboard/events/${row.event.id}`}
-                      class="font-medium hover:text-[var(--color-brand)]"
-                    >
-                      {row.event.title}
-                    </a>
-                    <p class="text-xs text-[var(--color-ink-muted)]">
-                      <StatusBadge
-                        label={EVENT_STATUS_LABELS[row.event.status] ?? row.event.status}
-                        status={row.event.status}
-                      />
-                    </p>
-                  </td>
-                  <td class="text-[var(--color-ink-muted)]">
-                    {formatCompactWindow(row.event.startsAt, row.event.timezone)}
-                  </td>
-                  <td class="text-right">
-                    {row.sold}
-                    <span class="text-[var(--color-ink-muted)]"> / {row.capacity}</span>
-                  </td>
-                  <td class="text-right">{row.orders}</td>
-                  {canSeeMoney && (
-                    <td class="text-right">{formatMoney(row.revenueMinor, currency)}</td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-    }
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
   </section>
 
   <section class="mt-8">
     <h2 class="text-lg font-semibold tracking-tight">Recent registrations</h2>
 
-    {
-      recentOrders.length === 0 ? (
-        <p class="card mt-3 p-6 text-sm text-[var(--color-ink-muted)]">
-          No registrations yet.
-        </p>
-      ) : (
-        <div class="card mt-3 overflow-x-auto">
-          <table class="data-table">
-            <thead>
+    {recentOrders.length === 0 ? (
+      <p class="card mt-3 p-6 text-sm text-[var(--color-ink-muted)]">No registrations yet.</p>
+    ) : (
+      <div class="card mt-3 overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Reference</th>
+              <th scope="col">Buyer</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="text-center">
+                Tickets
+              </th>
+              <th scope="col" class="text-right">
+                Total
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentOrders.map((order) => (
               <tr>
-                <th scope="col">Reference</th>
-                <th scope="col">Buyer</th>
-                <th scope="col">Status</th>
-                <th scope="col" class="text-center">Tickets</th>
-                <th scope="col" class="text-right">Total</th>
+                <td class="font-mono text-xs">{order.publicReference}</td>
+                <td>
+                  <p class="font-medium">{order.buyerName}</p>
+                  <p class="text-xs text-[var(--color-ink-muted)]">{order.buyerEmail}</p>
+                </td>
+                <td>
+                  <StatusBadge
+                    label={ORDER_STATUS_LABELS[order.status] ?? order.status}
+                    status={order.status}
+                  />
+                </td>
+                <td class="text-center">{order.attendeeCount}</td>
+                <td class="text-right">{formatMoney(order.totalMinor, order.currency)}</td>
               </tr>
-            </thead>
-            <tbody>
-              {recentOrders.map((order) => (
-                <tr>
-                  <td class="font-mono text-xs">{order.publicReference}</td>
-                  <td>
-                    <p class="font-medium">{order.buyerName}</p>
-                    <p class="text-xs text-[var(--color-ink-muted)]">{order.buyerEmail}</p>
-                  </td>
-                  <td>
-                    <StatusBadge
-                      label={ORDER_STATUS_LABELS[order.status] ?? order.status}
-                      status={order.status}
-                    />
-                  </td>
-                  <td class="text-center">{order.attendeeCount}</td>
-                  <td class="text-right">{formatMoney(order.totalMinor, order.currency)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-    }
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
   </section>
 </DashboardLayout>

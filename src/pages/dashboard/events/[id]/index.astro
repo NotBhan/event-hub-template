@@ -70,7 +70,9 @@ const isPast = event.endsAt < new Date();
 
 <DashboardLayout title={event.title} description="Manage an event" section="events">
   <nav class="mb-6 text-sm" aria-label="Breadcrumb">
-    <a href="/dashboard/events" class="text-[var(--color-ink-muted)] hover:underline">Events</a>
+    <a href="/dashboard/events" class="text-[var(--color-ink-muted)] hover:underline">
+      Events
+    </a>
     <span class="text-[var(--color-ink-muted)]"> / </span>
     <span class="text-[var(--color-ink-muted)]">{event.title}</span>
   </nav>
@@ -83,10 +85,7 @@ const isPast = event.endsAt < new Date();
           label={EVENT_STATUS_LABELS[event.status] ?? event.status}
           status={event.status}
         />
-        <StatusBadge
-          label={EVENT_FORMAT_LABELS[event.format] ?? event.format}
-          tone="info"
-        />
+        <StatusBadge label={EVENT_FORMAT_LABELS[event.format] ?? event.format} tone="info" />
         {event.visibility === 'private' && <StatusBadge label="Private" tone="neutral" />}
       </div>
       <p class="mt-2 text-sm text-[var(--color-ink-muted)]">
@@ -109,66 +108,62 @@ const isPast = event.endsAt < new Date();
       <a href={`/dashboard/events/${event.id}/orders`} class="btn btn-secondary btn-sm">
         Orders
       </a>
-      {
-        can(Astro, { check_in: ['perform'] }) && (
-          <a href={`/dashboard/check-in/${event.id}`} class="btn btn-secondary btn-sm">
-            Scanner
-          </a>
-        )
-      }
+      {can(Astro, { check_in: ['perform'] }) && (
+        <a href={`/dashboard/check-in/${event.id}`} class="btn btn-secondary btn-sm">
+          Scanner
+        </a>
+      )}
     </div>
   </div>
 
-  {
-    statusResult?.data && (
-      <p
-        class:list={[
-          'mb-6 rounded-[var(--radius-card)] border p-3 text-sm',
-          statusResult.data.ok
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-            : 'border-red-200 bg-red-50 text-red-800',
-        ]}
-      >
-        {statusResult.data.ok ? statusResult.data.message : statusResult.data.fieldErrors?._form}
-      </p>
-    )
-  }
+  {statusResult?.data && (
+    <p
+      class:list={[
+        'mb-6 rounded-[var(--radius-card)] border p-3 text-sm',
+        statusResult.data.ok
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+          : 'border-red-200 bg-red-50 text-red-800',
+      ]}
+    >
+      {statusResult.data.ok ? statusResult.data.message : statusResult.data.fieldErrors?._form}
+    </p>
+  )}
 
-  {
-    ticketResult?.data && (
-      <p
-        class:list={[
-          'mb-6 rounded-[var(--radius-card)] border p-3 text-sm',
-          ticketResult.data.ok
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-            : 'border-red-200 bg-red-50 text-red-800',
-        ]}
-      >
-        {ticketResult.data.ok ? ticketResult.data.message : ticketResult.data.fieldErrors?._form}
-      </p>
-    )
-  }
+  {ticketResult?.data && (
+    <p
+      class:list={[
+        'mb-6 rounded-[var(--radius-card)] border p-3 text-sm',
+        ticketResult.data.ok
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+          : 'border-red-200 bg-red-50 text-red-800',
+      ]}
+    >
+      {ticketResult.data.ok ? ticketResult.data.message : ticketResult.data.fieldErrors?._form}
+    </p>
+  )}
 
-  {
-    sessionResult?.data?.ok && (
-      <p class="mb-6 rounded-[var(--radius-card)] border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
-        {sessionResult.data.message}
-      </p>
-    )
-  }
+  {sessionResult?.data?.ok && (
+    <p class="mb-6 rounded-[var(--radius-card)] border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+      {sessionResult.data.message}
+    </p>
+  )}
 
   <section class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <div class="card p-4">
       <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
         Confirmed registrations
       </p>
-      <p class="mt-1.5 text-2xl font-semibold">{counts.reduce((sum, row) => sum + row.quantitySold, 0)}</p>
+      <p class="mt-1.5 text-2xl font-semibold">
+        {counts.reduce((sum, row) => sum + row.quantitySold, 0)}
+      </p>
     </div>
     <div class="card p-4">
       <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
         Held for checkout
       </p>
-      <p class="mt-1.5 text-2xl font-semibold">{counts.reduce((sum, row) => sum + row.quantityReserved, 0)}</p>
+      <p class="mt-1.5 text-2xl font-semibold">
+        {counts.reduce((sum, row) => sum + row.quantityReserved, 0)}
+      </p>
       <p class="mt-1 text-xs text-[var(--color-ink-muted)]">Not yet paid</p>
     </div>
     <div class="card p-4">
@@ -177,81 +172,86 @@ const isPast = event.endsAt < new Date();
       </p>
       <p class="mt-1.5 text-2xl font-semibold">
         {checkInStats.admitted}
-        <span class="text-base font-normal text-[var(--color-ink-muted)]"> / {checkInStats.issued}</span>
+        <span class="text-base font-normal text-[var(--color-ink-muted)]">
+          {' '}
+          / {checkInStats.issued}
+        </span>
       </p>
       {checkInStats.duplicates > 0 && (
         <p class="mt-1 text-xs text-amber-700">{checkInStats.duplicates} repeat scans</p>
       )}
     </div>
-    {
-      canSeeMoney && (
-        <div class="card p-4">
-          <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
-            Void tickets
-          </p>
-          <p class="mt-1.5 text-2xl font-semibold">
-            {counts.reduce((sum, row) => sum + row.voided, 0)}
-          </p>
-        </div>
-      )
-    }
+    {canSeeMoney && (
+      <div class="card p-4">
+        <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
+          Void tickets
+        </p>
+        <p class="mt-1.5 text-2xl font-semibold">
+          {counts.reduce((sum, row) => sum + row.voided, 0)}
+        </p>
+      </div>
+    )}
   </section>
 
   <section class="card mb-6 p-5">
     <h2 class="text-lg font-semibold">Publishing</h2>
     <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
-      {
-        event.status === 'draft'
-          ? 'This event is a draft. Only staff can see it.'
-          : event.status === 'published'
-            ? 'This event is live and accepting registrations.'
-            : event.status === 'cancelled'
-              ? 'This event is cancelled and no longer accepts registrations.'
-              : 'This event has finished.'
-      }
+      {event.status === 'draft'
+        ? 'This event is a draft. Only staff can see it.'
+        : event.status === 'published'
+          ? 'This event is live and accepting registrations.'
+          : event.status === 'cancelled'
+            ? 'This event is cancelled and no longer accepts registrations.'
+            : 'This event has finished.'}
     </p>
 
     <div class="mt-4 flex flex-wrap gap-2">
-      {
-        canPublish && event.status === 'draft' && (
-          <form method="POST" action={actions.setEventStatus}>
-            <input type="hidden" name="eventId" value={event.id} />
-            <input type="hidden" name="status" value="publish" />
-            <button type="submit" class="btn btn-primary btn-sm">Publish event</button>
-          </form>
-        )
-      }
+      {canPublish && event.status === 'draft' && (
+        <form method="POST" action={actions.setEventStatus}>
+          <input type="hidden" name="eventId" value={event.id} />
+          <input type="hidden" name="status" value="publish" />
+          <button type="submit" class="btn btn-primary btn-sm">
+            Publish event
+          </button>
+        </form>
+      )}
 
-      {
-        canPublish && event.status === 'published' && (
-          <form method="POST" action={actions.setEventStatus}>
-            <input type="hidden" name="eventId" value={event.id} />
-            <input type="hidden" name="status" value="unpublish" />
-            <button type="submit" class="btn btn-secondary btn-sm">Move back to draft</button>
-          </form>
-        )
-      }
+      {canPublish && event.status === 'published' && (
+        <form method="POST" action={actions.setEventStatus}>
+          <input type="hidden" name="eventId" value={event.id} />
+          <input type="hidden" name="status" value="unpublish" />
+          <button type="submit" class="btn btn-secondary btn-sm">
+            Move back to draft
+          </button>
+        </form>
+      )}
 
-      {
-        canPublish && event.status === 'published' && isPast && (
-          <form method="POST" action={actions.setEventStatus}>
-            <input type="hidden" name="eventId" value={event.id} />
-            <input type="hidden" name="status" value="complete" />
-            <button type="submit" class="btn btn-secondary btn-sm">Mark as completed</button>
-          </form>
-        )
-      }
+      {canPublish && event.status === 'published' && isPast && (
+        <form method="POST" action={actions.setEventStatus}>
+          <input type="hidden" name="eventId" value={event.id} />
+          <input type="hidden" name="status" value="complete" />
+          <button type="submit" class="btn btn-secondary btn-sm">
+            Mark as completed
+          </button>
+        </form>
+      )}
 
       {canCancel && event.status !== 'cancelled' && event.status !== 'completed' && (
         <details class="w-full">
           <summary class="btn btn-ghost btn-sm inline-flex cursor-pointer text-red-700">
             Cancel this event
           </summary>
-          <form method="POST" action={actions.setEventStatus} class="mt-3 space-y-3 rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-4">
+          <form
+            method="POST"
+            action={actions.setEventStatus}
+            class="mt-3 space-y-3 rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-4"
+          >
             <input type="hidden" name="eventId" value={event.id} />
             <input type="hidden" name="status" value="cancel" />
             <div>
-              <label class="label" for="cancelReason">Reason (recorded in the audit log)</label>
+              <label class="label" for="cancelReason">
+                Reason (recorded in the audit log)
+              </label>
               <input
                 id="cancelReason"
                 name="reason"
@@ -264,7 +264,9 @@ const isPast = event.endsAt < new Date();
               Cancelling stops new registrations. It does not move any money — issue refunds
               separately so each one is recorded.
             </p>
-            <button type="submit" class="btn btn-danger btn-sm">Cancel event</button>
+            <button type="submit" class="btn btn-danger btn-sm">
+              Cancel event
+            </button>
           </form>
         </details>
       )}
@@ -274,242 +276,314 @@ const isPast = event.endsAt < new Date();
   <section class="mb-6">
     <h2 class="mb-3 text-lg font-semibold tracking-tight">Ticket types</h2>
 
-    {
-      ticketTypes.length === 0 ? (
-        <p class="card p-5 text-sm text-[var(--color-ink-muted)]">
-          No ticket types yet. Add at least one before publishing.
-        </p>
-      ) : (
-        <div class="card overflow-x-auto">
-          <table class="data-table">
-            <thead>
+    {ticketTypes.length === 0 ? (
+      <p class="card p-5 text-sm text-[var(--color-ink-muted)]">
+        No ticket types yet. Add at least one before publishing.
+      </p>
+    ) : (
+      <div class="card overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col" class="text-right">
+                Price
+              </th>
+              <th scope="col" class="text-right">
+                Sold
+              </th>
+              <th scope="col" class="text-right">
+                Held
+              </th>
+              <th scope="col" class="text-right">
+                Available
+              </th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ticketTypes.map((type) => (
               <tr>
-                <th scope="col">Name</th>
-                <th scope="col" class="text-right">Price</th>
-                <th scope="col" class="text-right">Sold</th>
-                <th scope="col" class="text-right">Held</th>
-                <th scope="col" class="text-right">Available</th>
-                <th scope="col">Status</th>
+                <td>
+                  <p class="font-medium">{type.name}</p>
+                  {type.description && (
+                    <p class="text-xs text-[var(--color-ink-muted)]">{type.description}</p>
+                  )}
+                </td>
+                <td class="text-right">
+                  {type.priceMinor === 0 ? 'Free' : formatMoney(type.priceMinor, type.currency)}
+                </td>
+                <td class="text-right">{type.quantitySold}</td>
+                <td class="text-right">
+                  {type.quantityReserved > 0 ? (
+                    <span class="text-amber-700">{type.quantityReserved}</span>
+                  ) : (
+                    '0'
+                  )}
+                </td>
+                <td class="text-right">{availableQuantity(type)}</td>
+                <td>
+                  <StatusBadge
+                    label={type.isActive ? 'Active' : 'Inactive'}
+                    tone={type.isActive ? 'success' : 'neutral'}
+                  />
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {ticketTypes.map((type) => (
-                <tr>
-                  <td>
-                    <p class="font-medium">{type.name}</p>
-                    {type.description && (
-                      <p class="text-xs text-[var(--color-ink-muted)]">{type.description}</p>
-                    )}
-                  </td>
-                  <td class="text-right">
-                    {type.priceMinor === 0 ? 'Free' : formatMoney(type.priceMinor, type.currency)}
-                  </td>
-                  <td class="text-right">{type.quantitySold}</td>
-                  <td class="text-right">
-                    {type.quantityReserved > 0 ? (
-                      <span class="text-amber-700">{type.quantityReserved}</span>
-                    ) : (
-                      '0'
-                    )}
-                  </td>
-                  <td class="text-right">{availableQuantity(type)}</td>
-                  <td>
-                    <StatusBadge
-                      label={type.isActive ? 'Active' : 'Inactive'}
-                      tone={type.isActive ? 'success' : 'neutral'}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-    }
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
 
-    {
-      canManageTickets && (
-        <details class="card mt-4 p-5">
-          <summary class="cursor-pointer font-medium">Add a ticket type</summary>
-          <form method="POST" action={actions.saveTicketType} class="mt-4 grid gap-4 sm:grid-cols-2">
-            <input type="hidden" name="eventId" value={event.id} />
+    {canManageTickets && (
+      <details class="card mt-4 p-5">
+        <summary class="cursor-pointer font-medium">Add a ticket type</summary>
+        <form method="POST" action={actions.saveTicketType} class="mt-4 grid gap-4 sm:grid-cols-2">
+          <input type="hidden" name="eventId" value={event.id} />
 
-            <div class="sm:col-span-2">
-              <label class="label" for="tt-name">Name</label>
-              <input id="tt-name" name="name" class="input" required maxlength="120" placeholder="General admission" />
-              {ticketErrors.name && <p class="help-text text-red-700">{ticketErrors.name}</p>}
-            </div>
+          <div class="sm:col-span-2">
+            <label class="label" for="tt-name">
+              Name
+            </label>
+            <input
+              id="tt-name"
+              name="name"
+              class="input"
+              required
+              maxlength="120"
+              placeholder="General admission"
+            />
+            {ticketErrors.name && <p class="help-text text-red-700">{ticketErrors.name}</p>}
+          </div>
 
-            <div class="sm:col-span-2">
-              <label class="label" for="tt-description">Description</label>
-              <input id="tt-description" name="description" class="input" maxlength="1000" />
-            </div>
+          <div class="sm:col-span-2">
+            <label class="label" for="tt-description">
+              Description
+            </label>
+            <input id="tt-description" name="description" class="input" maxlength="1000" />
+          </div>
 
-            <div>
-              <label class="label" for="tt-price">Price ({currency})</label>
-              <input
-                id="tt-price"
-                name="price"
-                type="number"
-                step="0.01"
-                min="0"
-                class="input"
-                required
-                placeholder="0.00"
-              />
-              <p class="help-text">Enter 0 for a free ticket.</p>
-              {ticketErrors.price && <p class="help-text text-red-700">{ticketErrors.price}</p>}
-            </div>
+          <div>
+            <label class="label" for="tt-price">
+              Price ({currency})
+            </label>
+            <input
+              id="tt-price"
+              name="price"
+              type="number"
+              step="0.01"
+              min="0"
+              class="input"
+              required
+              placeholder="0.00"
+            />
+            <p class="help-text">Enter 0 for a free ticket.</p>
+            {ticketErrors.price && <p class="help-text text-red-700">{ticketErrors.price}</p>}
+          </div>
 
-            <div>
-              <label class="label" for="tt-capacity">Capacity</label>
-              <input
-                id="tt-capacity"
-                name="quantityTotal"
-                type="number"
-                min="0"
-                step="1"
-                class="input"
-                required
-                placeholder="100"
-              />
-              {ticketErrors.quantityTotal && (
-                <p class="help-text text-red-700">{ticketErrors.quantityTotal}</p>
-              )}
-            </div>
+          <div>
+            <label class="label" for="tt-capacity">
+              Capacity
+            </label>
+            <input
+              id="tt-capacity"
+              name="quantityTotal"
+              type="number"
+              min="0"
+              step="1"
+              class="input"
+              required
+              placeholder="100"
+            />
+            {ticketErrors.quantityTotal && (
+              <p class="help-text text-red-700">{ticketErrors.quantityTotal}</p>
+            )}
+          </div>
 
-            <div>
-              <label class="label" for="tt-min">Minimum per order</label>
-              <input id="tt-min" name="minPerOrder" type="number" min="1" max="100" class="input" value="1" />
-            </div>
-
-            <div>
-              <label class="label" for="tt-max">Maximum per order</label>
-              <input id="tt-max" name="maxPerOrder" type="number" min="1" max="100" class="input" value="10" />
-              {ticketErrors.maxPerOrder && (
-                <p class="help-text text-red-700">{ticketErrors.maxPerOrder}</p>
-              )}
-            </div>
-
-            <div>
-              <label class="label" for="tt-sales-start">Sales open (optional)</label>
-              <input id="tt-sales-start" name="salesStartAt" type="datetime-local" class="input" />
-            </div>
-
-            <div>
-              <label class="label" for="tt-sales-end">Sales close (optional)</label>
-              <input id="tt-sales-end" name="salesEndAt" type="datetime-local" class="input" />
-            </div>
-
-            <div class="sm:col-span-2 flex items-center gap-2">
-              <input id="tt-active" name="isActive" type="checkbox" value="on" checked class="h-4 w-4" />
-              <label for="tt-active" class="text-sm">On sale</label>
-            </div>
-
-            <div class="sm:col-span-2">
-              <button type="submit" class="btn btn-primary btn-sm">Add ticket type</button>
-            </div>
-          </form>
-        </details>
-      )
-    }
-  </section>
-
-  {
-    canEdit && (
-      <section class="mb-6">
-        <details class="card p-5">
-          <summary class="cursor-pointer font-medium">Event settings</summary>
-          <div class="mt-5">
-            <EventForm
-              action={actions.updateEvent}
-              event={event}
-              location={location}
-              access={access}
-              errors={editErrors}
-              values={editValues}
-              defaultTimezone={defaultTimezone}
-              submitLabel="Save changes"
+          <div>
+            <label class="label" for="tt-min">
+              Minimum per order
+            </label>
+            <input
+              id="tt-min"
+              name="minPerOrder"
+              type="number"
+              min="1"
+              max="100"
+              class="input"
+              value="1"
             />
           </div>
-        </details>
-      </section>
-    )
-  }
+
+          <div>
+            <label class="label" for="tt-max">
+              Maximum per order
+            </label>
+            <input
+              id="tt-max"
+              name="maxPerOrder"
+              type="number"
+              min="1"
+              max="100"
+              class="input"
+              value="10"
+            />
+            {ticketErrors.maxPerOrder && (
+              <p class="help-text text-red-700">{ticketErrors.maxPerOrder}</p>
+            )}
+          </div>
+
+          <div>
+            <label class="label" for="tt-sales-start">
+              Sales open (optional)
+            </label>
+            <input id="tt-sales-start" name="salesStartAt" type="datetime-local" class="input" />
+          </div>
+
+          <div>
+            <label class="label" for="tt-sales-end">
+              Sales close (optional)
+            </label>
+            <input id="tt-sales-end" name="salesEndAt" type="datetime-local" class="input" />
+          </div>
+
+          <div class="sm:col-span-2 flex items-center gap-2">
+            <input
+              id="tt-active"
+              name="isActive"
+              type="checkbox"
+              value="on"
+              checked
+              class="h-4 w-4"
+            />
+            <label for="tt-active" class="text-sm">
+              On sale
+            </label>
+          </div>
+
+          <div class="sm:col-span-2">
+            <button type="submit" class="btn btn-primary btn-sm">
+              Add ticket type
+            </button>
+          </div>
+        </form>
+      </details>
+    )}
+  </section>
+
+  {canEdit && (
+    <section class="mb-6">
+      <details class="card p-5">
+        <summary class="cursor-pointer font-medium">Event settings</summary>
+        <div class="mt-5">
+          <EventForm
+            action={actions.updateEvent}
+            event={event}
+            location={location}
+            access={access}
+            errors={editErrors}
+            values={editValues}
+            defaultTimezone={defaultTimezone}
+            submitLabel="Save changes"
+          />
+        </div>
+      </details>
+    </section>
+  )}
 
   <section class="mb-6">
     <h2 class="mb-3 text-lg font-semibold tracking-tight">Programme</h2>
 
-    {
-      sessions.length > 0 && (
-        <ul class="card mb-4 divide-y divide-[var(--color-line)]">
-          {sessions.map((session) => (
-            <li class="flex flex-wrap items-baseline justify-between gap-2 p-4">
-              <div>
-                <p class="font-medium">{session.title}</p>
-                {session.speakerName && (
-                  <p class="text-sm text-[var(--color-ink-muted)]">
-                    {session.speakerName}
-                    {session.room ? ` · ${session.room}` : ''}
-                  </p>
-                )}
-              </div>
-              <p class="text-sm text-[var(--color-ink-muted)]">
-                {utcToWallClock(session.startsAt, event.timezone).replace('T', ' ')} –{' '}
-                {utcToWallClock(session.endsAt, event.timezone).slice(11)}
-              </p>
-            </li>
-          ))}
-        </ul>
-      )
-    }
-
-    {
-      canEdit && (
-        <details class="card p-5">
-          <summary class="cursor-pointer font-medium">
-            {sessions.length > 0 ? 'Replace the programme' : 'Add sessions'}
-          </summary>
-          <form method="POST" action={actions.saveSessions} class="mt-4 space-y-4" data-sessions-form>
-            <input type="hidden" name="eventId" value={event.id} />
-
-            <p class="text-sm text-[var(--color-ink-muted)]">
-              Times are in {event.timezone}. Saving replaces the whole programme.
-            </p>
-
-            <div class="space-y-4" data-session-rows>
-              {[0, 1, 2].map((index) => (
-                <fieldset class="grid gap-3 rounded-[var(--radius-card)] border border-[var(--color-line)] p-4 sm:grid-cols-2">
-                  <div class="sm:col-span-2">
-                    <label class="label" for={`sessionTitle-${index}`}>Title</label>
-                    <input id={`sessionTitle-${index}`} name="sessionTitle" class="input" />
-                  </div>
-                  <div>
-                    <label class="label" for={`sessionStartsAt-${index}`}>Starts</label>
-                    <input id={`sessionStartsAt-${index}`} name="sessionStartsAt" type="datetime-local" class="input" />
-                  </div>
-                  <div>
-                    <label class="label" for={`sessionEndsAt-${index}`}>Ends</label>
-                    <input id={`sessionEndsAt-${index}`} name="sessionEndsAt" type="datetime-local" class="input" />
-                  </div>
-                  <div>
-                    <label class="label" for={`sessionSpeaker-${index}`}>Speaker</label>
-                    <input id={`sessionSpeaker-${index}`} name="sessionSpeaker" class="input" />
-                  </div>
-                  <div>
-                    <label class="label" for={`sessionRoom-${index}`}>Room</label>
-                    <input id={`sessionRoom-${index}`} name="sessionRoom" class="input" />
-                  </div>
-                </fieldset>
-              ))}
+    {sessions.length > 0 && (
+      <ul class="card mb-4 divide-y divide-[var(--color-line)]">
+        {sessions.map((session) => (
+          <li class="flex flex-wrap items-baseline justify-between gap-2 p-4">
+            <div>
+              <p class="font-medium">{session.title}</p>
+              {session.speakerName && (
+                <p class="text-sm text-[var(--color-ink-muted)]">
+                  {session.speakerName}
+                  {session.room ? ` · ${session.room}` : ''}
+                </p>
+              )}
             </div>
+            <p class="text-sm text-[var(--color-ink-muted)]">
+              {utcToWallClock(session.startsAt, event.timezone).replace('T', ' ')} –{' '}
+              {utcToWallClock(session.endsAt, event.timezone).slice(11)}
+            </p>
+          </li>
+        ))}
+      </ul>
+    )}
 
-            <button type="button" class="btn btn-secondary btn-sm" data-add-session>Add another</button>
-            <button type="submit" class="btn btn-primary btn-sm">Save programme</button>
-          </form>
-        </details>
-      )
-    }
+    {canEdit && (
+      <details class="card p-5">
+        <summary class="cursor-pointer font-medium">
+          {sessions.length > 0 ? 'Replace the programme' : 'Add sessions'}
+        </summary>
+        <form method="POST" action={actions.saveSessions} class="mt-4 space-y-4" data-sessions-form>
+          <input type="hidden" name="eventId" value={event.id} />
+
+          <p class="text-sm text-[var(--color-ink-muted)]">
+            Times are in {event.timezone}. Saving replaces the whole programme.
+          </p>
+
+          <div class="space-y-4" data-session-rows>
+            {[0, 1, 2].map((index) => (
+              <fieldset class="grid gap-3 rounded-[var(--radius-card)] border border-[var(--color-line)] p-4 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                  <label class="label" for={`sessionTitle-${index}`}>
+                    Title
+                  </label>
+                  <input id={`sessionTitle-${index}`} name="sessionTitle" class="input" />
+                </div>
+                <div>
+                  <label class="label" for={`sessionStartsAt-${index}`}>
+                    Starts
+                  </label>
+                  <input
+                    id={`sessionStartsAt-${index}`}
+                    name="sessionStartsAt"
+                    type="datetime-local"
+                    class="input"
+                  />
+                </div>
+                <div>
+                  <label class="label" for={`sessionEndsAt-${index}`}>
+                    Ends
+                  </label>
+                  <input
+                    id={`sessionEndsAt-${index}`}
+                    name="sessionEndsAt"
+                    type="datetime-local"
+                    class="input"
+                  />
+                </div>
+                <div>
+                  <label class="label" for={`sessionSpeaker-${index}`}>
+                    Speaker
+                  </label>
+                  <input id={`sessionSpeaker-${index}`} name="sessionSpeaker" class="input" />
+                </div>
+                <div>
+                  <label class="label" for={`sessionRoom-${index}`}>
+                    Room
+                  </label>
+                  <input id={`sessionRoom-${index}`} name="sessionRoom" class="input" />
+                </div>
+              </fieldset>
+            ))}
+          </div>
+
+          <button type="button" class="btn btn-secondary btn-sm" data-add-session>
+            Add another
+          </button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            Save programme
+          </button>
+        </form>
+      </details>
+    )}
   </section>
 </DashboardLayout>
 
@@ -531,7 +605,9 @@ const isPast = event.endsAt < new Date();
 
     const clone = template.cloneNode(true) as HTMLFieldSetElement;
 
-    for (const field of clone.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')) {
+    for (const field of clone.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+      'input, select',
+    )) {
       const name = field.getAttribute('name');
       if (name) field.removeAttribute('name');
       field.value = '';

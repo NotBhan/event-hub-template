@@ -1,13 +1,6 @@
 import { and, count, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
-import {
-  checkInAttempts,
-  events,
-  attendees,
-  orderItems,
-  tickets,
-  user,
-} from '@/lib/db/schema';
+import { checkInAttempts, events, attendees, orderItems, tickets, user } from '@/lib/db/schema';
 import { recordAudit } from '@/features/audit/service';
 import { toNumber } from '@/lib/db/scalars';
 import { errorChainMessage, isUniqueViolation } from '@/lib/db/errors';
@@ -86,7 +79,12 @@ export async function scanTicket(input: ScanInput): Promise<ScanResult> {
       deviceReference: input.deviceReference,
     });
 
-    return { outcome: 'invalid_token', accepted: false, message: OUTCOME_MESSAGES.invalid_token, firstAdmission: false };
+    return {
+      outcome: 'invalid_token',
+      accepted: false,
+      message: OUTCOME_MESSAGES.invalid_token,
+      firstAdmission: false,
+    };
   }
 
   const summary = {
@@ -142,14 +140,16 @@ export async function scanTicket(input: ScanInput): Promise<ScanResult> {
    * read.
    */
   try {
-    await db().insert(checkInAttempts).values({
-      ticketId: lookup.ticket.id,
-      eventId: input.eventId,
-      scannerUserId: input.scannerUserId,
-      outcome: 'accepted',
-      accepted: true,
-      deviceReference: input.deviceReference ?? null,
-    });
+    await db()
+      .insert(checkInAttempts)
+      .values({
+        ticketId: lookup.ticket.id,
+        eventId: input.eventId,
+        scannerUserId: input.scannerUserId,
+        outcome: 'accepted',
+        accepted: true,
+        deviceReference: input.deviceReference ?? null,
+      });
 
     await recordAudit(db(), {
       action: 'check_in.accepted',
@@ -197,14 +197,16 @@ async function recordAttempt(input: {
   deviceReference?: string | null;
 }): Promise<void> {
   try {
-    await db().insert(checkInAttempts).values({
-      ticketId: input.ticketId,
-      eventId: input.eventId,
-      scannerUserId: input.scannerUserId,
-      outcome: input.outcome,
-      accepted: input.accepted,
-      deviceReference: input.deviceReference ?? null,
-    });
+    await db()
+      .insert(checkInAttempts)
+      .values({
+        ticketId: input.ticketId,
+        eventId: input.eventId,
+        scannerUserId: input.scannerUserId,
+        outcome: input.outcome,
+        accepted: input.accepted,
+        deviceReference: input.deviceReference ?? null,
+      });
 
     await recordAudit(db(), {
       action: 'check_in.rejected',
@@ -257,7 +259,9 @@ export async function getCheckInStats(eventId: string): Promise<{
   const [duplicates] = await db()
     .select({ value: count() })
     .from(checkInAttempts)
-    .where(and(eq(checkInAttempts.eventId, eventId), eq(checkInAttempts.outcome, 'already_checked_in')));
+    .where(
+      and(eq(checkInAttempts.eventId, eventId), eq(checkInAttempts.outcome, 'already_checked_in')),
+    );
 
   const [rejected] = await db()
     .select({ value: count() })
@@ -329,7 +333,9 @@ export async function reverseAdmission(input: {
 }): Promise<boolean> {
   const deleted = await db()
     .delete(checkInAttempts)
-    .where(and(eq(checkInAttempts.ticketId, input.ticketId), eq(checkInAttempts.outcome, 'accepted')))
+    .where(
+      and(eq(checkInAttempts.ticketId, input.ticketId), eq(checkInAttempts.outcome, 'accepted')),
+    )
     .returning({ id: checkInAttempts.id });
 
   if (deleted.length === 0) return false;

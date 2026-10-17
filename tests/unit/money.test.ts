@@ -57,7 +57,12 @@ describe('money', () => {
   });
 
   it('refuses to sum mixed currencies instead of producing a meaningless total', () => {
-    expect(sumMinor([{ amountMinor: 100, currency: 'INR' }, { amountMinor: 250, currency: 'INR' }])).toEqual({
+    expect(
+      sumMinor([
+        { amountMinor: 100, currency: 'INR' },
+        { amountMinor: 250, currency: 'INR' },
+      ]),
+    ).toEqual({
       amountMinor: 350,
       currency: 'INR',
     });

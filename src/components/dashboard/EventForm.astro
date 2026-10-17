@@ -79,24 +79,22 @@ const selectedTimezone = value('timezone', timezone);
 ---
 
 <form method="POST" action={action} class="space-y-6">
-  {
-    event && <input type="hidden" name="eventId" value={event.id} />
-  }
+  {event && <input type="hidden" name="eventId" value={event.id} />}
 
-  {
-    errors._form && (
-      <p class="rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-        {errors._form}
-      </p>
-    )
-  }
+  {errors._form && (
+    <p class="rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+      {errors._form}
+    </p>
+  )}
 
   <section class="card p-5">
     <h2 class="text-lg font-semibold">Basics</h2>
 
     <div class="mt-4 space-y-4">
       <div>
-        <label class="label" for="title">Event title</label>
+        <label class="label" for="title">
+          Event title
+        </label>
         <input
           id="title"
           name="title"
@@ -110,7 +108,9 @@ const selectedTimezone = value('timezone', timezone);
       </div>
 
       <div>
-        <label class="label" for="summary">Short summary</label>
+        <label class="label" for="summary">
+          Short summary
+        </label>
         <input
           id="summary"
           name="summary"
@@ -123,7 +123,9 @@ const selectedTimezone = value('timezone', timezone);
       </div>
 
       <div>
-        <label class="label" for="description">Description</label>
+        <label class="label" for="description">
+          Description
+        </label>
         <textarea
           id="description"
           name="description"
@@ -135,7 +137,9 @@ const selectedTimezone = value('timezone', timezone);
 
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
-          <label class="label" for="category">Category</label>
+          <label class="label" for="category">
+            Category
+          </label>
           <input
             id="category"
             name="category"
@@ -147,7 +151,9 @@ const selectedTimezone = value('timezone', timezone);
         </div>
 
         <div>
-          <label class="label" for="coverImageUrl">Cover image URL</label>
+          <label class="label" for="coverImageUrl">
+            Cover image URL
+          </label>
           <input
             id="coverImageUrl"
             name="coverImageUrl"
@@ -167,22 +173,38 @@ const selectedTimezone = value('timezone', timezone);
 
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       <div>
-        <label class="label" for="format">Format</label>
+        <label class="label" for="format">
+          Format
+        </label>
         <select id="format" name="format" class="input" data-event-format>
-          <option value="in_person" selected={format === 'in_person'}>In person</option>
-          <option value="online" selected={format === 'online'}>Online</option>
-          <option value="hybrid" selected={format === 'hybrid'}>Hybrid</option>
+          <option value="in_person" selected={format === 'in_person'}>
+            In person
+          </option>
+          <option value="online" selected={format === 'online'}>
+            Online
+          </option>
+          <option value="hybrid" selected={format === 'hybrid'}>
+            Hybrid
+          </option>
         </select>
         {errors.format && <p class="help-text text-red-700">{errors.format}</p>}
       </div>
 
       <div>
-        <label class="label" for="visibility">Visibility</label>
+        <label class="label" for="visibility">
+          Visibility
+        </label>
         <select id="visibility" name="visibility" class="input">
-          <option value="public" selected={visibility === 'public'}>Public — listed on the site</option>
-          <option value="private" selected={visibility === 'private'}>Private — link only</option>
+          <option value="public" selected={visibility === 'public'}>
+            Public — listed on the site
+          </option>
+          <option value="private" selected={visibility === 'private'}>
+            Private — link only
+          </option>
         </select>
-        <p class="help-text">Private events are never listed, but their page still works for direct links.</p>
+        <p class="help-text">
+          Private events are never listed, but their page still works for direct links.
+        </p>
       </div>
     </div>
   </section>
@@ -192,22 +214,20 @@ const selectedTimezone = value('timezone', timezone);
 
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       <div class="sm:col-span-2">
-        <label class="label" for="timezone">Event timezone</label>
+        <label class="label" for="timezone">
+          Event timezone
+        </label>
         <select id="timezone" name="timezone" class="input">
-          {
-            COMMON_TIMEZONES.map((zone) => (
-              <option value={zone} selected={zone === selectedTimezone}>
-                {zone}
-              </option>
-            ))
-          }
-          {
-            !(COMMON_TIMEZONES as readonly string[]).includes(selectedTimezone) && (
-              <option value={selectedTimezone} selected>
-                {selectedTimezone}
-              </option>
-            )
-          }
+          {COMMON_TIMEZONES.map((zone) => (
+            <option value={zone} selected={zone === selectedTimezone}>
+              {zone}
+            </option>
+          ))}
+          {!(COMMON_TIMEZONES as readonly string[]).includes(selectedTimezone) && (
+            <option value={selectedTimezone} selected>
+              {selectedTimezone}
+            </option>
+          )}
         </select>
         <p class="help-text">
           All times below are in this timezone, and attendees see them in it too.
@@ -215,7 +235,9 @@ const selectedTimezone = value('timezone', timezone);
       </div>
 
       <div>
-        <label class="label" for="startsAt">Starts</label>
+        <label class="label" for="startsAt">
+          Starts
+        </label>
         <input
           id="startsAt"
           name="startsAt"
@@ -229,7 +251,9 @@ const selectedTimezone = value('timezone', timezone);
       </div>
 
       <div>
-        <label class="label" for="endsAt">Ends</label>
+        <label class="label" for="endsAt">
+          Ends
+        </label>
         <input
           id="endsAt"
           name="endsAt"
@@ -282,7 +306,9 @@ const selectedTimezone = value('timezone', timezone);
 
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       <div class="sm:col-span-2">
-        <label class="label" for="venueName">Venue name</label>
+        <label class="label" for="venueName">
+          Venue name
+        </label>
         <input
           id="venueName"
           name="venueName"
@@ -294,7 +320,9 @@ const selectedTimezone = value('timezone', timezone);
       </div>
 
       <div class="sm:col-span-2">
-        <label class="label" for="streetAddress">Street address</label>
+        <label class="label" for="streetAddress">
+          Street address
+        </label>
         <input
           id="streetAddress"
           name="streetAddress"
@@ -304,17 +332,23 @@ const selectedTimezone = value('timezone', timezone);
       </div>
 
       <div>
-        <label class="label" for="city">City</label>
+        <label class="label" for="city">
+          City
+        </label>
         <input id="city" name="city" class="input" value={value('city', location?.city)} />
       </div>
 
       <div>
-        <label class="label" for="region">State or region</label>
+        <label class="label" for="region">
+          State or region
+        </label>
         <input id="region" name="region" class="input" value={value('region', location?.region)} />
       </div>
 
       <div>
-        <label class="label" for="postalCode">Postal code</label>
+        <label class="label" for="postalCode">
+          Postal code
+        </label>
         <input
           id="postalCode"
           name="postalCode"
@@ -324,12 +358,21 @@ const selectedTimezone = value('timezone', timezone);
       </div>
 
       <div>
-        <label class="label" for="country">Country</label>
-        <input id="country" name="country" class="input" value={value('country', location?.country)} />
+        <label class="label" for="country">
+          Country
+        </label>
+        <input
+          id="country"
+          name="country"
+          class="input"
+          value={value('country', location?.country)}
+        />
       </div>
 
       <div class="sm:col-span-2">
-        <label class="label" for="directions">Directions</label>
+        <label class="label" for="directions">
+          Directions
+        </label>
         <textarea
           id="directions"
           name="directions"
@@ -350,7 +393,9 @@ const selectedTimezone = value('timezone', timezone);
 
     <div class="mt-4 grid gap-4">
       <div>
-        <label class="label" for="accessPlatform">Platform</label>
+        <label class="label" for="accessPlatform">
+          Platform
+        </label>
         <input
           id="accessPlatform"
           name="accessPlatform"
@@ -363,7 +408,9 @@ const selectedTimezone = value('timezone', timezone);
       </div>
 
       <div>
-        <label class="label" for="joinUrl">Joining link</label>
+        <label class="label" for="joinUrl">
+          Joining link
+        </label>
         <input
           id="joinUrl"
           name="joinUrl"
@@ -389,7 +436,9 @@ const selectedTimezone = value('timezone', timezone);
       </div>
 
       <div>
-        <label class="label" for="accessInstructions">Instructions for attendees</label>
+        <label class="label" for="accessInstructions">
+          Instructions for attendees
+        </label>
         <textarea
           id="accessInstructions"
           name="accessInstructions"
@@ -409,7 +458,9 @@ const selectedTimezone = value('timezone', timezone);
 
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       <div>
-        <label class="label" for="refundPolicy">Policy</label>
+        <label class="label" for="refundPolicy">
+          Policy
+        </label>
         <select id="refundPolicy" name="refundPolicy" class="input">
           <option
             value="no_refunds"
@@ -451,7 +502,9 @@ const selectedTimezone = value('timezone', timezone);
       </div>
 
       <div class="sm:col-span-2">
-        <label class="label" for="refundPolicyNotes">Notes shown to attendees</label>
+        <label class="label" for="refundPolicyNotes">
+          Notes shown to attendees
+        </label>
         <textarea
           id="refundPolicyNotes"
           name="refundPolicyNotes"
@@ -464,7 +517,9 @@ const selectedTimezone = value('timezone', timezone);
   </section>
 
   <div class="flex items-center gap-3">
-    <button type="submit" class="btn btn-primary">{submitLabel}</button>
+    <button type="submit" class="btn btn-primary">
+      {submitLabel}
+    </button>
     <slot name="secondary" />
   </div>
 </form>

@@ -31,33 +31,31 @@ const events = await listScannableEvents(membership.organizationId);
     </p>
   </div>
 
-  {
-    events.length === 0 ? (
-      <p class="card p-8 text-center text-sm text-[var(--color-ink-muted)]">
-        No events are open for check-in. An event must be published before tickets can be scanned.
-      </p>
-    ) : (
-      <ul class="grid gap-3 sm:grid-cols-2">
-        {events.map((event) => (
-          <li class="card p-4">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="font-semibold">{event.title}</p>
-                <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
-                  {formatCompactWindow(event.startsAt, event.timezone)}
-                </p>
-              </div>
-              <StatusBadge
-                label={EVENT_STATUS_LABELS[event.status] ?? event.status}
-                status={event.status}
-              />
+  {events.length === 0 ? (
+    <p class="card p-8 text-center text-sm text-[var(--color-ink-muted)]">
+      No events are open for check-in. An event must be published before tickets can be scanned.
+    </p>
+  ) : (
+    <ul class="grid gap-3 sm:grid-cols-2">
+      {events.map((event) => (
+        <li class="card p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="font-semibold">{event.title}</p>
+              <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+                {formatCompactWindow(event.startsAt, event.timezone)}
+              </p>
             </div>
-            <a href={`/dashboard/check-in/${event.id}`} class="btn btn-primary btn-sm mt-4">
-              Open scanner
-            </a>
-          </li>
-        ))}
-      </ul>
-    )
-  }
+            <StatusBadge
+              label={EVENT_STATUS_LABELS[event.status] ?? event.status}
+              status={event.status}
+            />
+          </div>
+          <a href={`/dashboard/check-in/${event.id}`} class="btn btn-primary btn-sm mt-4">
+            Open scanner
+          </a>
+        </li>
+      ))}
+    </ul>
+  )}
 </DashboardLayout>

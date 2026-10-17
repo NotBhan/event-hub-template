@@ -17,11 +17,7 @@ import { toNumber } from '@/lib/db/scalars';
 import { ordersId } from '@/lib/db/sql';
 import { isUniqueViolation } from '@/lib/db/errors';
 import { serverEnv } from '@/lib/security/env';
-import {
-  BadRequestError,
-  ConflictError,
-  NotFoundError,
-} from '@/lib/security/errors';
+import { BadRequestError, ConflictError, NotFoundError } from '@/lib/security/errors';
 import {
   generateIdempotencyKey,
   generateOrderReference,
@@ -446,10 +442,7 @@ export async function expireAbandonedOrders(options: { limit?: number } = {}): P
       .select({ id: orders.id })
       .from(orders)
       .where(
-        and(
-          eq(orders.status, 'pending_payment'),
-          lte(orders.reservationExpiresAt, new Date()),
-        ),
+        and(eq(orders.status, 'pending_payment'), lte(orders.reservationExpiresAt, new Date())),
       )
       .orderBy(orders.reservationExpiresAt)
       .limit(limit)
@@ -499,9 +492,7 @@ export async function cancelOrder(input: {
     if (!order) throw new NotFoundError('Order not found');
 
     if (order.status === 'confirmed') {
-      throw new ConflictError(
-        'A confirmed order cannot be cancelled directly. Refund it instead.',
-      );
+      throw new ConflictError('A confirmed order cannot be cancelled directly. Refund it instead.');
     }
 
     if (order.status === 'cancelled' || order.status === 'expired') return order;
@@ -539,10 +530,7 @@ export async function cancelOrder(input: {
  * Releases inventory and voids tickets when an order is refunded in full.
  * Called by the refund service after the provider confirms the refund.
  */
-export async function releaseOrderInventory(
-  tx: DbExecutor,
-  orderId: string,
-): Promise<void> {
+export async function releaseOrderInventory(tx: DbExecutor, orderId: string): Promise<void> {
   const lines = await reservationLinesFor(tx, orderId);
   await returnSoldInventory(tx, lines);
 }
@@ -751,10 +739,7 @@ export async function listOrders(filters: OrderFilters): Promise<{
     .limit(limit)
     .offset(offset);
 
-  const [totals] = await db()
-    .select({ value: count() })
-    .from(orders)
-    .where(where);
+  const [totals] = await db().select({ value: count() }).from(orders).where(where);
 
   return {
     rows: rows.map((row) => ({

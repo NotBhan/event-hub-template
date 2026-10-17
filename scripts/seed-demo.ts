@@ -41,9 +41,7 @@ async function main(): Promise<void> {
   const [org] = await db().select().from(organization).limit(1);
 
   if (!org) {
-    throw new Error(
-      'No organization found. Run `npm run provision` first to create one.',
-    );
+    throw new Error('No organization found. Run `npm run provision` first to create one.');
   }
 
   step(`Organization: ${org.name} (${org.id})`);
@@ -301,7 +299,11 @@ async function main(): Promise<void> {
   ];
 
   for (const registration of registrations) {
-    const detail = await createEventOrderInput(registration.eventId, registration.ticketTypeId, registration.attendees);
+    const detail = await createEventOrderInput(
+      registration.eventId,
+      registration.ticketTypeId,
+      registration.attendees,
+    );
 
     const created = await createOrder({
       eventId: registration.eventId,
@@ -343,7 +345,7 @@ async function createEventOrderInput(
 
   const chosen = preferredTicketTypeId
     ? types.find((type) => type.id === preferredTicketTypeId)
-    : types.find((type) => type.priceMinor === 0) ?? types[0];
+    : (types.find((type) => type.priceMinor === 0) ?? types[0]);
 
   if (!chosen) throw new Error(`No ticket types for event ${eventId}`);
 

@@ -54,7 +54,9 @@ function pageUrl(target: number): string {
 
 <DashboardLayout title={`Attendees · ${event.title}`} description="Attendee list" section="events">
   <nav class="mb-6 text-sm" aria-label="Breadcrumb">
-    <a href="/dashboard/events" class="text-[var(--color-ink-muted)] hover:underline">Events</a>
+    <a href="/dashboard/events" class="text-[var(--color-ink-muted)] hover:underline">
+      Events
+    </a>
     <span class="text-[var(--color-ink-muted)]"> / </span>
     <a href={`/dashboard/events/${event.id}`} class="text-[var(--color-ink-muted)] hover:underline">
       {event.title}
@@ -72,25 +74,27 @@ function pageUrl(target: number): string {
     </div>
 
     <div class="flex gap-2">
-      <a href={`/dashboard/events/${event.id}/orders`} class="btn btn-secondary btn-sm">Orders</a>
-      {
-        canExport && (
-          <a
-            href={`/dashboard/events/${event.id}/attendees.csv`}
-            class="btn btn-secondary btn-sm"
-            download
-          >
-            Export CSV
-          </a>
-        )
-      }
+      <a href={`/dashboard/events/${event.id}/orders`} class="btn btn-secondary btn-sm">
+        Orders
+      </a>
+      {canExport && (
+        <a
+          href={`/dashboard/events/${event.id}/attendees.csv`}
+          class="btn btn-secondary btn-sm"
+          download
+        >
+          Export CSV
+        </a>
+      )}
     </div>
   </div>
 
   <form method="GET" class="card mb-6 p-4">
     <div class="flex flex-wrap items-end gap-3">
       <div class="min-w-56 flex-1">
-        <label class="label" for="q">Search</label>
+        <label class="label" for="q">
+          Search
+        </label>
         <input
           id="q"
           name="q"
@@ -100,17 +104,23 @@ function pageUrl(target: number): string {
           value={search}
         />
       </div>
-      <button type="submit" class="btn btn-secondary btn-sm">Search</button>
-      {search && <a href="?" class="btn btn-ghost btn-sm">Clear</a>}
+      <button type="submit" class="btn btn-secondary btn-sm">
+        Search
+      </button>
+      {search && (
+        <a href="?" class="btn btn-ghost btn-sm">
+          Clear
+        </a>
+      )}
     </div>
   </form>
 
-  {
-    attendees.length === 0 ? (
-      <p class="card p-8 text-center text-sm text-[var(--color-ink-muted)]">
-        {search ? 'No attendees match that search.' : 'No attendees yet.'}
-      </p>
-    ) : (
+  {attendees.length === 0 ? (
+    <p class="card p-8 text-center text-sm text-[var(--color-ink-muted)]">
+      {search ? 'No attendees match that search.' : 'No attendees yet.'}
+    </p>
+  ) : (
+    <>
       <div class="card overflow-x-auto">
         <table class="data-table">
           <thead>
@@ -177,6 +187,6 @@ function pageUrl(target: number): string {
           Next
         </a>
       </div>
-    )
-  }
+    </>
+  )}
 </DashboardLayout>

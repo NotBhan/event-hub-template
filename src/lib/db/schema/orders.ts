@@ -120,7 +120,9 @@ export const orderItems = pgTable(
     unitPriceMinorSnapshot: bigint('unit_price_minor_snapshot', { mode: 'number' })
       .notNull()
       .default(0),
-    discountMinorSnapshot: bigint('discount_minor_snapshot', { mode: 'number' }).notNull().default(0),
+    discountMinorSnapshot: bigint('discount_minor_snapshot', { mode: 'number' })
+      .notNull()
+      .default(0),
     taxMinorSnapshot: bigint('tax_minor_snapshot', { mode: 'number' }).notNull().default(0),
     lineTotalMinor: bigint('line_total_minor', { mode: 'number' }).notNull().default(0),
     currency: text('currency').notNull(),

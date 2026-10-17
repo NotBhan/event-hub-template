@@ -204,8 +204,16 @@ describe('payments', () => {
 
     const body = new TextEncoder().encode(webhook.body);
 
-    await processWebhook({ rawBody: body, signature: webhook.signature, eventIdHeader: webhook.eventId });
-    await processWebhook({ rawBody: body, signature: webhook.signature, eventIdHeader: webhook.eventId });
+    await processWebhook({
+      rawBody: body,
+      signature: webhook.signature,
+      eventIdHeader: webhook.eventId,
+    });
+    await processWebhook({
+      rawBody: body,
+      signature: webhook.signature,
+      eventIdHeader: webhook.eventId,
+    });
 
     const rows = await db()
       .select()
@@ -287,7 +295,9 @@ describe('payments', () => {
     const payment = await getLatestPayment(order.id);
     expect(payment?.status).toBe('captured');
 
-    const metadata = payment?.metadata as { amountMismatch?: { expected: number; received: number } };
+    const metadata = payment?.metadata as {
+      amountMismatch?: { expected: number; received: number };
+    };
     expect(metadata?.amountMismatch?.expected).toBe(300_000);
     expect(metadata?.amountMismatch?.received).toBe(100);
   });

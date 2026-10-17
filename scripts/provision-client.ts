@@ -109,7 +109,11 @@ async function main(): Promise<void> {
   }
 
   // --- Owner account --------------------------------------------------------
-  const [existingUser] = await db().select().from(user).where(eq(user.email, options.email.toLowerCase())).limit(1);
+  const [existingUser] = await db()
+    .select()
+    .from(user)
+    .where(eq(user.email, options.email.toLowerCase()))
+    .limit(1);
 
   let ownerUserId: string;
 

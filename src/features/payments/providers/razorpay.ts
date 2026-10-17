@@ -148,9 +148,7 @@ export class RazorpayProvider implements PaymentProvider {
      * keeps de-duplication working for deliveries that omit the header, since an
      * identical redelivery produces an identical digest.
      */
-    const eventId =
-      input.eventIdHeader ??
-      createHash('sha256').update(body).digest('hex');
+    const eventId = input.eventIdHeader ?? createHash('sha256').update(body).digest('hex');
 
     return {
       eventId,
@@ -253,8 +251,12 @@ function mapRefundStatus(status: string): ProviderRefund['status'] {
 }
 
 /** Translates a provider event into an intent the payment service understands. */
-function normaliseIntent(eventType: string, payload: Record<string, unknown>): VerifiedWebhook['intent'] {
-  const container = payload.payload as Record<string, { entity?: Record<string, unknown> }> | undefined;
+function normaliseIntent(
+  eventType: string,
+  payload: Record<string, unknown>,
+): VerifiedWebhook['intent'] {
+  const container = payload.payload as
+    Record<string, { entity?: Record<string, unknown> }> | undefined;
 
   switch (eventType) {
     case 'payment.captured':
@@ -314,7 +316,8 @@ function normaliseIntent(eventType: string, payload: Record<string, unknown>): V
  * identifiers, amounts and statuses are retained.
  */
 function summarise(eventType: string, payload: Record<string, unknown>): Record<string, unknown> {
-  const container = payload.payload as Record<string, { entity?: Record<string, unknown> }> | undefined;
+  const container = payload.payload as
+    Record<string, { entity?: Record<string, unknown> }> | undefined;
   const entity = container?.payment?.entity ?? container?.refund?.entity;
 
   if (!entity) return { eventType };

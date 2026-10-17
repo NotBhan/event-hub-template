@@ -1,0 +1,23 @@
+# Build output and dependencies
+dist/
+node_modules/
+.astro/
+
+# Generated and binary assets
+public/fonts/
+package-lock.json
+
+# Migrations are generated; formatting them would fight the tool
+drizzle/
+
+# Local artifacts
+screenshots/
+test-results/
+playwright-report/
+coverage/
+backups/
+
+# Docs kept as-authored
+PROJECT_OVERVIEW.md
+README.md
+deployment/README.md

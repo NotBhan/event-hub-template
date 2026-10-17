@@ -78,7 +78,12 @@ export interface EventInput {
   } | null;
 }
 
-function assertEventTiming(input: { startsAt: Date; endsAt: Date; registrationOpensAt?: Date | null; registrationClosesAt?: Date | null }): void {
+function assertEventTiming(input: {
+  startsAt: Date;
+  endsAt: Date;
+  registrationOpensAt?: Date | null;
+  registrationClosesAt?: Date | null;
+}): void {
   if (input.endsAt <= input.startsAt) {
     throw new ConflictError('The event must end after it starts');
   }
@@ -208,7 +213,11 @@ async function upsertAccess(tx: DbExecutor, eventId: string, input: EventInput):
 }
 
 /** Ensures a slug is unique within the organization, suffixing when needed. */
-async function allocateSlug(tx: DbExecutor, organizationId: string, source: string): Promise<string> {
+async function allocateSlug(
+  tx: DbExecutor,
+  organizationId: string,
+  source: string,
+): Promise<string> {
   const base = slugify(source) || 'event';
 
   for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -231,10 +240,7 @@ async function allocateSlug(tx: DbExecutor, organizationId: string, source: stri
  *
  * The single ownership check every dashboard read and write passes through.
  */
-export async function assertEventAccess(
-  eventId: string,
-  organizationId: string,
-): Promise<Event> {
+export async function assertEventAccess(eventId: string, organizationId: string): Promise<Event> {
   const [event] = await db().select().from(events).where(eq(events.id, eventId)).limit(1);
 
   if (!event) throw new NotFoundError('Event not found');
@@ -267,9 +273,13 @@ export async function updateEvent(
     const startsAt = input.startsAt ?? existing.startsAt;
     const endsAt = input.endsAt ?? existing.endsAt;
     const registrationOpensAt =
-      input.registrationOpensAt !== undefined ? input.registrationOpensAt : existing.registrationOpensAt;
+      input.registrationOpensAt !== undefined
+        ? input.registrationOpensAt
+        : existing.registrationOpensAt;
     const registrationClosesAt =
-      input.registrationClosesAt !== undefined ? input.registrationClosesAt : existing.registrationClosesAt;
+      input.registrationClosesAt !== undefined
+        ? input.registrationClosesAt
+        : existing.registrationClosesAt;
 
     assertEventTiming({ startsAt, endsAt, registrationOpensAt, registrationClosesAt });
 
@@ -292,7 +302,9 @@ export async function updateEvent(
         registrationClosesAt,
         ...(input.refundPolicy !== undefined ? { refundPolicy: input.refundPolicy } : {}),
         ...(input.refundableUntil !== undefined ? { refundableUntil: input.refundableUntil } : {}),
-        ...(input.refundPolicyNotes !== undefined ? { refundPolicyNotes: input.refundPolicyNotes } : {}),
+        ...(input.refundPolicyNotes !== undefined
+          ? { refundPolicyNotes: input.refundPolicyNotes }
+          : {}),
       })
       .where(eq(events.id, eventId))
       .returning();
@@ -360,7 +372,7 @@ export async function publishEvent(
       throw new ConflictError('Add at least one active ticket type before publishing');
     }
 
-    if ((event.format === 'in_person' || event.format === 'hybrid')) {
+    if (event.format === 'in_person' || event.format === 'hybrid') {
       const [venue] = await tx
         .select({ eventId: eventLocations.eventId })
         .from(eventLocations)
@@ -510,14 +522,16 @@ export async function completePastEvents(): Promise<number> {
  * Only published, public events are ever returned. `from`/`to` filter on the
  * event's start time and `upcomingOnly` excludes everything already finished.
  */
-export async function listPublicEvents(filters: {
-  search?: string;
-  category?: string;
-  format?: 'in_person' | 'online' | 'hybrid';
-  upcomingOnly?: boolean;
-  limit?: number;
-  offset?: number;
-} = {}) {
+export async function listPublicEvents(
+  filters: {
+    search?: string;
+    category?: string;
+    format?: 'in_person' | 'online' | 'hybrid';
+    upcomingOnly?: boolean;
+    limit?: number;
+    offset?: number;
+  } = {},
+) {
   const conditions = [eq(events.status, 'published'), eq(events.visibility, 'public')];
 
   if (filters.upcomingOnly !== false) {
@@ -786,7 +800,11 @@ export async function getEventEditorData(eventId: string, organizationId: string
     .where(eq(eventLocations.eventId, eventId))
     .limit(1);
 
-  const [access] = await db().select().from(eventAccess).where(eq(eventAccess.eventId, eventId)).limit(1);
+  const [access] = await db()
+    .select()
+    .from(eventAccess)
+    .where(eq(eventAccess.eventId, eventId))
+    .limit(1);
 
   const sessions = await db()
     .select()
@@ -800,7 +818,13 @@ export async function getEventEditorData(eventId: string, organizationId: string
     .where(eq(ticketTypes.eventId, eventId))
     .orderBy(asc(ticketTypes.sortOrder), asc(ticketTypes.createdAt));
 
-  return { event, location: location ?? null, access: access ?? null, sessions, ticketTypes: types };
+  return {
+    event,
+    location: location ?? null,
+    access: access ?? null,
+    sessions,
+    ticketTypes: types,
+  };
 }
 
 export async function replaceEventSessions(

@@ -22,7 +22,10 @@ const search = Astro.url.searchParams.get('q')?.trim() ?? '';
 const statusParam = Astro.url.searchParams.get('status')?.trim() ?? '';
 
 const status =
-  statusParam === 'draft' || statusParam === 'published' || statusParam === 'cancelled' || statusParam === 'completed'
+  statusParam === 'draft' ||
+  statusParam === 'published' ||
+  statusParam === 'cancelled' ||
+  statusParam === 'completed'
     ? statusParam
     : undefined;
 
@@ -48,120 +51,135 @@ const canSeeMoney = can(Astro, { payment: ['read'] });
       </p>
     </div>
 
-    {
-      canCreate && (
-        <a href="/dashboard/events/new" class="btn btn-primary">
-          New event
-        </a>
-      )
-    }
+    {canCreate && (
+      <a href="/dashboard/events/new" class="btn btn-primary">
+        New event
+      </a>
+    )}
   </div>
 
   <form method="GET" action="/dashboard/events" class="card mb-6 p-4">
     <div class="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
       <div>
-        <label class="label" for="q">Search</label>
-        <input id="q" name="q" type="search" class="input" placeholder="Title or slug" value={search} />
+        <label class="label" for="q">
+          Search
+        </label>
+        <input
+          id="q"
+          name="q"
+          type="search"
+          class="input"
+          placeholder="Title or slug"
+          value={search}
+        />
       </div>
 
       <div class="sm:w-44">
-        <label class="label" for="status">Status</label>
+        <label class="label" for="status">
+          Status
+        </label>
         <select id="status" name="status" class="input">
           <option value="">All statuses</option>
-          {
-            Object.entries(EVENT_STATUS_LABELS).map(([value, label]) => (
-              <option value={value} selected={value === status}>
-                {label}
-              </option>
-            ))
-          }
+          {Object.entries(EVENT_STATUS_LABELS).map(([value, label]) => (
+            <option value={value} selected={value === status}>
+              {label}
+            </option>
+          ))}
         </select>
       </div>
 
       <div class="flex items-end gap-2">
-        <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
-        <a href="/dashboard/events" class="btn btn-ghost btn-sm">Clear</a>
+        <button type="submit" class="btn btn-secondary btn-sm">
+          Filter
+        </button>
+        <a href="/dashboard/events" class="btn btn-ghost btn-sm">
+          Clear
+        </a>
       </div>
     </div>
   </form>
 
-  {
-    rows.length === 0 ? (
-      <div class="card p-10 text-center">
-        <p class="font-medium">No events yet.</p>
-        <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
-          Create an event, add ticket types, then publish it.
-        </p>
-        {canCreate && (
-          <a href="/dashboard/events/new" class="btn btn-primary btn-sm mt-4">
-            Create your first event
-          </a>
-        )}
-      </div>
-    ) : (
-      <div class="card overflow-x-auto">
-        <table class="data-table">
-          <thead>
+  {rows.length === 0 ? (
+    <div class="card p-10 text-center">
+      <p class="font-medium">No events yet.</p>
+      <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+        Create an event, add ticket types, then publish it.
+      </p>
+      {canCreate && (
+        <a href="/dashboard/events/new" class="btn btn-primary btn-sm mt-4">
+          Create your first event
+        </a>
+      )}
+    </div>
+  ) : (
+    <div class="card overflow-x-auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Event</th>
+            <th scope="col">Status</th>
+            <th scope="col">Starts</th>
+            <th scope="col" class="text-right">
+              Sold
+            </th>
+            <th scope="col" class="text-right">
+              Registrations
+            </th>
+            {canSeeMoney && (
+              <th scope="col" class="text-right">
+                Revenue
+              </th>
+            )}
+            <th scope="col" />
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
             <tr>
-              <th scope="col">Event</th>
-              <th scope="col">Status</th>
-              <th scope="col">Starts</th>
-              <th scope="col" class="text-right">Sold</th>
-              <th scope="col" class="text-right">Registrations</th>
-              {canSeeMoney && <th scope="col" class="text-right">Revenue</th>}
-              <th scope="col" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr>
-                <td>
+              <td>
+                <a
+                  href={`/dashboard/events/${row.event.id}`}
+                  class="font-medium hover:text-[var(--color-brand)]"
+                >
+                  {row.event.title}
+                </a>
+                <p class="mt-0.5 text-xs text-[var(--color-ink-muted)]">
+                  {EVENT_FORMAT_LABELS[row.event.format] ?? row.event.format}
+                  {row.event.visibility === 'private' ? ' · Private' : ''}
+                </p>
+              </td>
+              <td>
+                <StatusBadge
+                  label={EVENT_STATUS_LABELS[row.event.status] ?? row.event.status}
+                  status={row.event.status}
+                />
+              </td>
+              <td class="text-[var(--color-ink-muted)]">
+                {formatCompactWindow(row.event.startsAt, row.event.timezone)}
+              </td>
+              <td class="text-right">
+                {row.sold}
+                <span class="text-[var(--color-ink-muted)]"> / {row.capacity}</span>
+              </td>
+              <td class="text-right">{row.orders}</td>
+              {canSeeMoney && <td class="text-right">{formatMoney(row.revenueMinor, currency)}</td>}
+              <td class="text-right">
+                <div class="flex justify-end gap-1">
                   <a
-                    href={`/dashboard/events/${row.event.id}`}
-                    class="font-medium hover:text-[var(--color-brand)]"
+                    href={`/dashboard/events/${row.event.id}/attendees`}
+                    class="btn btn-ghost btn-sm"
                   >
-                    {row.event.title}
+                    Attendees
                   </a>
-                  <p class="mt-0.5 text-xs text-[var(--color-ink-muted)]">
-                    {EVENT_FORMAT_LABELS[row.event.format] ?? row.event.format}
-                    {row.event.visibility === 'private' ? ' · Private' : ''}
-                  </p>
-                </td>
-                <td>
-                  <StatusBadge
-                    label={EVENT_STATUS_LABELS[row.event.status] ?? row.event.status}
-                    status={row.event.status}
-                  />
-                </td>
-                <td class="text-[var(--color-ink-muted)]">
-                  {formatCompactWindow(row.event.startsAt, row.event.timezone)}
-                </td>
-                <td class="text-right">
-                  {row.sold}
-                  <span class="text-[var(--color-ink-muted)]"> / {row.capacity}</span>
-                </td>
-                <td class="text-right">{row.orders}</td>
-                {canSeeMoney && (
-                  <td class="text-right">{formatMoney(row.revenueMinor, currency)}</td>
-                )}
-                <td class="text-right">
-                  <div class="flex justify-end gap-1">
-                    <a
-                      href={`/dashboard/events/${row.event.id}/attendees`}
-                      class="btn btn-ghost btn-sm"
-                    >
-                      Attendees
-                    </a>
-                    <a href={`/dashboard/events/${row.event.id}`} class="btn btn-secondary btn-sm">
-                      Manage
-                    </a>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )
-  }
+                  <a href={`/dashboard/events/${row.event.id}`} class="btn btn-secondary btn-sm">
+                    Manage
+                  </a>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
 </DashboardLayout>

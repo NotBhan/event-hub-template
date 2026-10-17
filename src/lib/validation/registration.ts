@@ -45,8 +45,7 @@ export interface ParsedRegistration {
 }
 
 export type ParseResult =
-  | { ok: true; value: ParsedRegistration }
-  | { ok: false; errors: Record<string, string> };
+  { ok: true; value: ParsedRegistration } | { ok: false; errors: Record<string, string> };
 
 const QUANTITY_PREFIX = 'quantity__';
 const ATTENDEE_PREFIX = 'attendee_';
@@ -55,13 +54,16 @@ export function parseRegistrationForm(form: FormData, ticketTypes: TicketTypeRul
   const errors: Record<string, string> = {};
 
   const buyerName = personNameSchema.safeParse(form.get('buyerName'));
-  if (!buyerName.success) errors.buyerName = buyerName.error.issues[0]?.message ?? 'Enter your name';
+  if (!buyerName.success)
+    errors.buyerName = buyerName.error.issues[0]?.message ?? 'Enter your name';
 
   const buyerEmail = emailSchema.safeParse(form.get('buyerEmail'));
-  if (!buyerEmail.success) errors.buyerEmail = buyerEmail.error.issues[0]?.message ?? 'Enter your email';
+  if (!buyerEmail.success)
+    errors.buyerEmail = buyerEmail.error.issues[0]?.message ?? 'Enter your email';
 
   const buyerPhoneRaw = phoneSchema.safeParse(form.get('buyerPhone'));
-  if (!buyerPhoneRaw.success) errors.buyerPhone = buyerPhoneRaw.error.issues[0]?.message ?? 'Enter a valid phone number';
+  if (!buyerPhoneRaw.success)
+    errors.buyerPhone = buyerPhoneRaw.error.issues[0]?.message ?? 'Enter a valid phone number';
 
   const lines: ParsedLine[] = [];
   let totalRequested = 0;
@@ -130,7 +132,8 @@ export function parseRegistrationForm(form: FormData, ticketTypes: TicketTypeRul
   }
 
   if (totalRequested > 25) {
-    errors._form = 'That is more than 25 tickets. Please contact the organizer for a group booking.';
+    errors._form =
+      'That is more than 25 tickets. Please contact the organizer for a group booking.';
   }
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };

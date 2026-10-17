@@ -17,9 +17,7 @@ export function paymentProvider(): PaymentProvider {
   if (cached) return cached;
 
   cached =
-    serverEnv().PAYMENT_PROVIDER === 'razorpay'
-      ? new RazorpayProvider()
-      : new SimulatedProvider();
+    serverEnv().PAYMENT_PROVIDER === 'razorpay' ? new RazorpayProvider() : new SimulatedProvider();
 
   return cached;
 }

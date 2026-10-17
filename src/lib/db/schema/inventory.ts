@@ -79,9 +79,8 @@ export type TicketType = typeof ticketTypes.$inferSelect;
 export type NewTicketType = typeof ticketTypes.$inferInsert;
 
 /** Remaining capacity, derived consistently wherever it is displayed. */
-export function availableQuantity(ticketType: Pick<
-  TicketType,
-  'quantityTotal' | 'quantitySold' | 'quantityReserved'
->): number {
+export function availableQuantity(
+  ticketType: Pick<TicketType, 'quantityTotal' | 'quantitySold' | 'quantityReserved'>,
+): number {
   return ticketType.quantityTotal - ticketType.quantitySold - ticketType.quantityReserved;
 }

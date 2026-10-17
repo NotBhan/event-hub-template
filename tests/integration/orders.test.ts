@@ -1,5 +1,11 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { createOrder, confirmOrder, expireAbandonedOrders, cancelOrder, getOrder } from '@/features/orders/service';
+import {
+  createOrder,
+  confirmOrder,
+  expireAbandonedOrders,
+  cancelOrder,
+  getOrder,
+} from '@/features/orders/service';
 import { issueTicketsForOrder, listTicketsForOrder } from '@/features/tickets/service';
 import { db } from '@/lib/db/client';
 import { emailOutbox, orders } from '@/lib/db/schema';

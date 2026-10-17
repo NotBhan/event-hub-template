@@ -11,7 +11,13 @@ import { roleHasPermission } from '@/lib/permissions/guards';
 import { isOrganizerRole, ORGANIZER_ROLES, roles } from '@/lib/permissions';
 import { hashRegistrationAccessToken } from '@/lib/security/tokens';
 import { hasRegistrationAccess } from '@/lib/security/registration-access';
-import { createTestEvent, createTestOrganization, cleanupFixtures, type TestEvent, type TestOrganization } from '../setup/fixtures';
+import {
+  createTestEvent,
+  createTestOrganization,
+  cleanupFixtures,
+  type TestEvent,
+  type TestOrganization,
+} from '../setup/fixtures';
 
 /**
  * Access control.
@@ -60,14 +66,17 @@ describe('access control', () => {
     });
 
     it('refuses to publish another organization event', async () => {
-      await expect(
-        publishEvent(eventB.eventId, orgA.organizationId, orgA.userId),
-      ).rejects.toThrow(/another organization/i);
+      await expect(publishEvent(eventB.eventId, orgA.organizationId, orgA.userId)).rejects.toThrow(
+        /another organization/i,
+      );
     });
 
     it('refuses to cancel another organization event', async () => {
       await expect(
-        cancelEvent(eventB.eventId, orgA.organizationId, { reason: 'Not mine', actorUserId: orgA.userId }),
+        cancelEvent(eventB.eventId, orgA.organizationId, {
+          reason: 'Not mine',
+          actorUserId: orgA.userId,
+        }),
       ).rejects.toThrow(/another organization/i);
     });
 

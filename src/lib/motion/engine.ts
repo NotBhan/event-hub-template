@@ -163,9 +163,9 @@ function buildReveals(): void {
     });
   }
 
-  const items = gsap.utils.toArray<HTMLElement>('[data-reveal]').filter(
-    (element) => !element.closest('[data-stagger]'),
-  );
+  const items = gsap.utils
+    .toArray<HTMLElement>('[data-reveal]')
+    .filter((element) => !element.closest('[data-stagger]'));
 
   for (const item of items) {
     const variant = (item.dataset.reveal || 'up') as RevealVariant;

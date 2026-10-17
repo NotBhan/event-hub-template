@@ -10,8 +10,22 @@
 
 /** Currencies whose smallest unit is the whole unit. */
 const ZERO_DECIMAL_CURRENCIES = new Set([
-  'BIF', 'CLP', 'DJF', 'GNF', 'ISK', 'JPY', 'KMF', 'KRW', 'PYG',
-  'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
+  'BIF',
+  'CLP',
+  'DJF',
+  'GNF',
+  'ISK',
+  'JPY',
+  'KMF',
+  'KRW',
+  'PYG',
+  'RWF',
+  'UGX',
+  'VND',
+  'VUV',
+  'XAF',
+  'XOF',
+  'XPF',
 ]);
 
 /** Currencies with three decimal places. */

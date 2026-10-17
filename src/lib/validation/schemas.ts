@@ -91,7 +91,12 @@ export const eventFormSchema = z
     endsAt: z.string().trim().min(10, 'Choose an end date and time'),
     registrationOpensAt: optionalString(40),
     registrationClosesAt: optionalString(40),
-    refundPolicy: z.enum(['no_refunds', 'refundable_until_start', 'refundable_until_date', 'custom']),
+    refundPolicy: z.enum([
+      'no_refunds',
+      'refundable_until_start',
+      'refundable_until_date',
+      'custom',
+    ]),
     refundableUntil: optionalString(40),
     refundPolicyNotes: optionalString(1000),
 
@@ -110,7 +115,11 @@ export const eventFormSchema = z
   })
   .superRefine((value, ctx) => {
     if (value.endsAt <= value.startsAt) {
-      ctx.addIssue({ code: 'custom', path: ['endsAt'], message: 'The event must end after it starts' });
+      ctx.addIssue({
+        code: 'custom',
+        path: ['endsAt'],
+        message: 'The event must end after it starts',
+      });
     }
 
     if (

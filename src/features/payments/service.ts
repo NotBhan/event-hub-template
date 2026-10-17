@@ -287,7 +287,8 @@ async function settleVerifiedPayment(input: SettleInput): Promise<PaymentOutcome
       payment: updated ?? payment,
       confirmed: false,
       needsReconciliation: true,
-      message: 'We have received your payment but it needs manual review. Our team has been notified.',
+      message:
+        'We have received your payment but it needs manual review. Our team has been notified.',
     };
   }
 
@@ -346,14 +347,16 @@ export async function processWebhook(input: {
        * id: an attacker must not be able to occupy a real event id and thereby
        * suppress a genuine delivery.
        */
-      await db().insert(webhookEvents).values({
-        provider: provider.name,
-        providerEventId: `rejected_${crypto.randomUUID()}`,
-        eventType: 'unknown',
-        signatureVerified: false,
-        status: 'failed',
-        errorMessage: 'Signature verification failed',
-      });
+      await db()
+        .insert(webhookEvents)
+        .values({
+          provider: provider.name,
+          providerEventId: `rejected_${crypto.randomUUID()}`,
+          eventType: 'unknown',
+          signatureVerified: false,
+          status: 'failed',
+          errorMessage: 'Signature verification failed',
+        });
 
       await recordAudit(db(), {
         action: 'webhook.rejected',
@@ -655,7 +658,11 @@ export async function finaliseRefund(refundId: string): Promise<void> {
     }
 
     const [order] = await tx
-      .select({ buyerEmail: orders.buyerEmail, buyerName: orders.buyerName, eventId: orders.eventId })
+      .select({
+        buyerEmail: orders.buyerEmail,
+        buyerName: orders.buyerName,
+        eventId: orders.eventId,
+      })
       .from(orders)
       .where(eq(orders.id, refund.orderId))
       .limit(1);
@@ -715,7 +722,9 @@ async function reconcilePaymentByProviderId(providerPaymentId: string): Promise<
  * This is the safety net for provider timeouts, abandoned checkouts that were
  * actually paid, delayed confirmations and amount mismatches.
  */
-export async function reconcileUnresolvedPayments(options: { limit?: number; olderThanMinutes?: number } = {}) {
+export async function reconcileUnresolvedPayments(
+  options: { limit?: number; olderThanMinutes?: number } = {},
+) {
   const limit = options.limit ?? 50;
   const olderThanMinutes = options.olderThanMinutes ?? 15;
   const cutoff = new Date(Date.now() - olderThanMinutes * 60_000);

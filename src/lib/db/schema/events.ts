@@ -12,12 +12,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { organization, user } from './auth';
-import {
-  eventFormatEnum,
-  eventStatusEnum,
-  eventVisibilityEnum,
-  refundPolicyEnum,
-} from './enums';
+import { eventFormatEnum, eventStatusEnum, eventVisibilityEnum, refundPolicyEnum } from './enums';
 
 /**
  * Events module: creation, publishing, scheduling, venues, sessions and
@@ -109,30 +104,27 @@ export const eventSessions = pgTable(
 );
 
 /** Venue details. Present for physical and hybrid events only. */
-export const eventLocations = pgTable(
-  'event_locations',
-  {
-    eventId: uuid('event_id')
-      .primaryKey()
-      .references(() => events.id, { onDelete: 'cascade' }),
+export const eventLocations = pgTable('event_locations', {
+  eventId: uuid('event_id')
+    .primaryKey()
+    .references(() => events.id, { onDelete: 'cascade' }),
 
-    venueName: text('venue_name').notNull(),
-    streetAddress: text('street_address'),
-    city: text('city'),
-    region: text('region'),
-    postalCode: text('postal_code'),
-    country: text('country'),
-    latitude: numeric('latitude', { precision: 9, scale: 6 }),
-    longitude: numeric('longitude', { precision: 9, scale: 6 }),
-    directions: text('directions'),
+  venueName: text('venue_name').notNull(),
+  streetAddress: text('street_address'),
+  city: text('city'),
+  region: text('region'),
+  postalCode: text('postal_code'),
+  country: text('country'),
+  latitude: numeric('latitude', { precision: 9, scale: 6 }),
+  longitude: numeric('longitude', { precision: 9, scale: 6 }),
+  directions: text('directions'),
 
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true })
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-);
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
 
 /**
  * Online access details. Private by definition: joining instructions are never

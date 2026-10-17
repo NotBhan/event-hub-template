@@ -37,8 +37,14 @@ const result = Astro.getActionResult(actions.updateSettings);
 
 /** Deployment facts worth surfacing, without exposing any secret value. */
 const deployment = [
-  { label: 'Payment provider', value: env.PAYMENT_PROVIDER === 'simulated' ? 'Simulated (demo only)' : 'Razorpay' },
-  { label: 'Email transport', value: env.EMAIL_PROVIDER === 'console' ? 'Console log (development)' : 'SMTP' },
+  {
+    label: 'Payment provider',
+    value: env.PAYMENT_PROVIDER === 'simulated' ? 'Simulated (demo only)' : 'Razorpay',
+  },
+  {
+    label: 'Email transport',
+    value: env.EMAIL_PROVIDER === 'console' ? 'Console log (development)' : 'SMTP',
+  },
   { label: 'Public site URL', value: env.PUBLIC_SITE_URL },
   { label: 'Order reservation window', value: `${env.ORDER_RESERVATION_MINUTES} minutes` },
   { label: 'Guest checkout', value: features.guestCheckout ? 'Allowed' : 'Disabled' },
@@ -54,35 +60,33 @@ const deployment = [
     </p>
   </div>
 
-  {
-    result?.data && (
-      <p
-        class:list={[
-          'mb-6 rounded-[var(--radius-card)] border p-3 text-sm',
-          result.data.ok
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-            : 'border-red-200 bg-red-50 text-red-800',
-        ]}
-      >
-        {result.data.ok ? result.data.message : result.data.fieldErrors?._form}
-      </p>
-    )
-  }
+  {result?.data && (
+    <p
+      class:list={[
+        'mb-6 rounded-[var(--radius-card)] border p-3 text-sm',
+        result.data.ok
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+          : 'border-red-200 bg-red-50 text-red-800',
+      ]}
+    >
+      {result.data.ok ? result.data.message : result.data.fieldErrors?._form}
+    </p>
+  )}
 
-  {
-    !canUpdate && (
-      <p class="mb-6 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-        Your role can view these settings but not change them.
-      </p>
-    )
-  }
+  {!canUpdate && (
+    <p class="mb-6 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+      Your role can view these settings but not change them.
+    </p>
+  )}
 
   <section class="card mb-6 p-5">
     <h2 class="text-lg font-semibold">Branding</h2>
 
     <form method="POST" action={actions.updateSettings} class="mt-4 grid gap-4 sm:grid-cols-2">
       <div class="sm:col-span-2">
-        <label class="label" for="brandName">Organization name</label>
+        <label class="label" for="brandName">
+          Organization name
+        </label>
         <input
           id="brandName"
           name="brandName"
@@ -95,7 +99,9 @@ const deployment = [
       </div>
 
       <div>
-        <label class="label" for="logoUrl">Logo URL</label>
+        <label class="label" for="logoUrl">
+          Logo URL
+        </label>
         <input
           id="logoUrl"
           name="logoUrl"
@@ -108,7 +114,9 @@ const deployment = [
       </div>
 
       <div>
-        <label class="label" for="primaryColor">Primary colour</label>
+        <label class="label" for="primaryColor">
+          Primary colour
+        </label>
         <input
           id="primaryColor"
           name="primaryColor"
@@ -121,7 +129,9 @@ const deployment = [
       </div>
 
       <div>
-        <label class="label" for="supportEmail">Support email</label>
+        <label class="label" for="supportEmail">
+          Support email
+        </label>
         <input
           id="supportEmail"
           name="supportEmail"
@@ -133,7 +143,9 @@ const deployment = [
       </div>
 
       <div>
-        <label class="label" for="supportPhone">Support phone</label>
+        <label class="label" for="supportPhone">
+          Support phone
+        </label>
         <input
           id="supportPhone"
           name="supportPhone"
@@ -145,7 +157,9 @@ const deployment = [
       </div>
 
       <div>
-        <label class="label" for="defaultCurrency">Default currency</label>
+        <label class="label" for="defaultCurrency">
+          Default currency
+        </label>
         <input
           id="defaultCurrency"
           name="defaultCurrency"
@@ -160,26 +174,29 @@ const deployment = [
       </div>
 
       <div>
-        <label class="label" for="defaultTimezone">Default timezone</label>
+        <label class="label" for="defaultTimezone">
+          Default timezone
+        </label>
         <select id="defaultTimezone" name="defaultTimezone" class="input" disabled={!canUpdate}>
-          {
-            COMMON_TIMEZONES.map((zone) => (
-              <option value={zone} selected={(settings?.defaultTimezone ?? site.defaultTimezone) === zone}>
-                {zone}
-              </option>
-            ))
-          }
+          {COMMON_TIMEZONES.map((zone) => (
+            <option
+              value={zone}
+              selected={(settings?.defaultTimezone ?? site.defaultTimezone) === zone}
+            >
+              {zone}
+            </option>
+          ))}
         </select>
         <p class="help-text">New events default to this timezone.</p>
       </div>
 
-      {
-        canUpdate && (
-          <div class="sm:col-span-2">
-            <button type="submit" class="btn btn-primary btn-sm">Save settings</button>
-          </div>
-        )
-      }
+      {canUpdate && (
+        <div class="sm:col-span-2">
+          <button type="submit" class="btn btn-primary btn-sm">
+            Save settings
+          </button>
+        </div>
+      )}
     </form>
   </section>
 
@@ -191,21 +208,20 @@ const deployment = [
     </p>
 
     <dl class="mt-4 grid gap-3 sm:grid-cols-2">
-      {
-        deployment.map((item) => (
-          <div>
-            <dt class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
-              {item.label}
-            </dt>
-            <dd class="mt-0.5 text-sm">{item.value}</dd>
-          </div>
-        ))
-      }
+      {deployment.map((item) => (
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
+            {item.label}
+          </dt>
+          <dd class="mt-0.5 text-sm">{item.value}</dd>
+        </div>
+      ))}
     </dl>
 
     <p class="mt-4 text-xs text-[var(--color-ink-muted)]">
       Payment credentials, the webhook secret and the ticket signing secret live only in the server
-      environment, so that a database backup alone can never be used to forge a ticket or move money.
+      environment, so that a database backup alone can never be used to forge a ticket or move
+      money.
     </p>
   </section>
 </DashboardLayout>

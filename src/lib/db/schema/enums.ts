@@ -12,7 +12,12 @@ export const eventFormatEnum = pgEnum('event_format', ['in_person', 'online', 'h
 
 export const eventVisibilityEnum = pgEnum('event_visibility', ['public', 'private']);
 
-export const eventStatusEnum = pgEnum('event_status', ['draft', 'published', 'cancelled', 'completed']);
+export const eventStatusEnum = pgEnum('event_status', [
+  'draft',
+  'published',
+  'cancelled',
+  'completed',
+]);
 
 export const refundPolicyEnum = pgEnum('refund_policy', [
   'no_refunds',

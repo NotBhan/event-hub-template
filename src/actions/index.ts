@@ -14,11 +14,7 @@ import {
   unpublishEvent as unpublishEventService,
   updateEvent as updateEventService,
 } from '@/features/events/service';
-import {
-  createTicketType,
-  deleteTicketType,
-  updateTicketType,
-} from '@/features/inventory/service';
+import { createTicketType, deleteTicketType, updateTicketType } from '@/features/inventory/service';
 import { createOrder } from '@/features/orders/service';
 import { requestRefund as requestRefundService } from '@/features/refunds/service';
 import { auth } from '@/lib/auth';
@@ -170,7 +166,11 @@ export const server = {
 
         return { ok: true, id: created.order.id, message: 'Registration created' };
       } catch (error) {
-        if (error instanceof SoldOutError || error instanceof ConflictError || error instanceof HttpError) {
+        if (
+          error instanceof SoldOutError ||
+          error instanceof ConflictError ||
+          error instanceof HttpError
+        ) {
           return { ok: false, fieldErrors: { _form: error.message }, values };
         }
 
@@ -374,7 +374,9 @@ export const server = {
       const values = formValues(form);
 
       try {
-        const { membership } = requirePermission(context.locals, { ticket_type: ['create', 'update'] });
+        const { membership } = requirePermission(context.locals, {
+          ticket_type: ['create', 'update'],
+        });
 
         const eventId = String(form.get('eventId') ?? '');
         const ticketTypeId = String(form.get('ticketTypeId') ?? '').trim();
@@ -426,7 +428,9 @@ export const server = {
           quantityTotal: data.quantityTotal,
           minPerOrder: data.minPerOrder,
           maxPerOrder: data.maxPerOrder,
-          salesStartAt: data.salesStartAt ? wallClockToUtc(data.salesStartAt, event.timezone) : null,
+          salesStartAt: data.salesStartAt
+            ? wallClockToUtc(data.salesStartAt, event.timezone)
+            : null,
           salesEndAt: data.salesEndAt ? wallClockToUtc(data.salesEndAt, event.timezone) : null,
           isActive: data.isActive,
           sortOrder: data.sortOrder,
@@ -472,10 +476,14 @@ export const server = {
       const values = formValues(form);
 
       try {
-        const { membership, user: actor } = requirePermission(context.locals, { refund: ['create'] });
+        const { membership, user: actor } = requirePermission(context.locals, {
+          refund: ['create'],
+        });
 
         const rawAmount = String(form.get('amount') ?? '').trim();
-        const ticketIds = form.getAll('ticketIds').filter((v): v is string => typeof v === 'string');
+        const ticketIds = form
+          .getAll('ticketIds')
+          .filter((v): v is string => typeof v === 'string');
 
         const parsed = refundRequestSchema.safeParse({
           orderId: form.get('orderId'),
@@ -497,9 +505,7 @@ export const server = {
           orderId: parsed.data.orderId,
           // The amount is entered in major units and converted for storage.
           amountMinor:
-            parsed.data.amount === undefined
-              ? undefined
-              : toMinorUnits(parsed.data.amount, 'INR'),
+            parsed.data.amount === undefined ? undefined : toMinorUnits(parsed.data.amount, 'INR'),
           ticketIds: ticketIds.length > 0 ? ticketIds : undefined,
           reason: parsed.data.reason,
           notes: parsed.data.notes ?? null,
@@ -575,7 +581,7 @@ export const server = {
 
         // Only an owner may create another owner or change one: allowing an admin
         // to promote themselves would defeat the role model entirely.
-        if ((input.role === 'owner') && membership.role !== 'owner') {
+        if (input.role === 'owner' && membership.role !== 'owner') {
           throw new ForbiddenError('Only an owner can grant owner access');
         }
 
@@ -624,10 +630,17 @@ export const server = {
     input: z.object({ memberId: z.string().min(1) }),
     handler: async (input, context): Promise<ActionResult> => {
       try {
-        const { membership, user: actor } = requirePermission(context.locals, { member: ['delete'] });
+        const { membership, user: actor } = requirePermission(context.locals, {
+          member: ['delete'],
+        });
 
         const [target] = await db()
-          .select({ id: member.id, role: member.role, userId: member.userId, organizationId: member.organizationId })
+          .select({
+            id: member.id,
+            role: member.role,
+            userId: member.userId,
+            organizationId: member.organizationId,
+          })
           .from(member)
           .where(eq(member.id, input.memberId))
           .limit(1);
@@ -679,7 +692,11 @@ export const server = {
         .or(z.literal('').transform(() => undefined)),
       supportEmail: z.union([z.email('Enter a valid email address'), z.literal('')]).optional(),
       supportPhone: z.string().trim().max(32).optional(),
-      defaultCurrency: z.string().trim().length(3, 'Use a three-letter currency code').toUpperCase(),
+      defaultCurrency: z
+        .string()
+        .trim()
+        .length(3, 'Use a three-letter currency code')
+        .toUpperCase(),
       defaultTimezone: z.string().trim().min(1, 'Choose a timezone').max(64),
     }),
     handler: async (input, context): Promise<ActionResult> => {
@@ -728,10 +745,16 @@ export const server = {
         const { membership } = requirePermission(context.locals, { event: ['update'] });
         const event = await getEventForOrganization(input.eventId, membership.organizationId);
 
-        const titles = form.getAll('sessionTitle').filter((v): v is string => typeof v === 'string');
-        const starts = form.getAll('sessionStartsAt').filter((v): v is string => typeof v === 'string');
+        const titles = form
+          .getAll('sessionTitle')
+          .filter((v): v is string => typeof v === 'string');
+        const starts = form
+          .getAll('sessionStartsAt')
+          .filter((v): v is string => typeof v === 'string');
         const ends = form.getAll('sessionEndsAt').filter((v): v is string => typeof v === 'string');
-        const speakers = form.getAll('sessionSpeaker').filter((v): v is string => typeof v === 'string');
+        const speakers = form
+          .getAll('sessionSpeaker')
+          .filter((v): v is string => typeof v === 'string');
         const rooms = form.getAll('sessionRoom').filter((v): v is string => typeof v === 'string');
 
         const sessions = [];
@@ -754,11 +777,13 @@ export const server = {
 
         await replaceEventSessions(input.eventId, membership.organizationId, sessions);
 
-        return { ok: true, message: `${sessions.length} session${sessions.length === 1 ? '' : 's'} saved` };
+        return {
+          ok: true,
+          message: `${sessions.length} session${sessions.length === 1 ? '' : 's'} saved`,
+        };
       } catch (error) {
         return toResult(error);
       }
     },
   }),
-
 };

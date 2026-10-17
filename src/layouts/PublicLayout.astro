@@ -33,7 +33,13 @@ try {
 }
 ---
 
-<BaseLayout title={title} description={description} noIndex={noIndex} branding={branding} theme="dark">
+<BaseLayout
+  title={title}
+  description={description}
+  noIndex={noIndex}
+  branding={branding}
+  theme="dark"
+>
   <SiteHeader slot="header" branding={branding} />
   <slot />
   <SiteFooter slot="footer" branding={branding} />

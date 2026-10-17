@@ -14,7 +14,9 @@ export const auditLogs = pgTable(
   'audit_logs',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    organizationId: text('organization_id').references(() => organization.id, { onDelete: 'cascade' }),
+    organizationId: text('organization_id').references(() => organization.id, {
+      onDelete: 'cascade',
+    }),
     actorUserId: text('actor_user_id').references(() => user.id, { onDelete: 'set null' }),
 
     action: text('action').notNull(),
@@ -37,7 +39,9 @@ export const emailOutbox = pgTable(
   'email_outbox',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    organizationId: text('organization_id').references(() => organization.id, { onDelete: 'cascade' }),
+    organizationId: text('organization_id').references(() => organization.id, {
+      onDelete: 'cascade',
+    }),
 
     recipient: text('recipient').notNull(),
     notificationType: notificationTypeEnum('notification_type').notNull(),

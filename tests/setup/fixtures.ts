@@ -41,18 +41,22 @@ export async function createTestOrganization(
   const suffix = organizationId.slice(0, 8);
   const email = `${role}-${suffix}@example.test`;
 
-  await db().insert(organization).values({
-    id: organizationId,
-    name: `Test Org ${suffix}`,
-    slug: `test-org-${suffix}`,
-  });
+  await db()
+    .insert(organization)
+    .values({
+      id: organizationId,
+      name: `Test Org ${suffix}`,
+      slug: `test-org-${suffix}`,
+    });
 
-  await db().insert(user).values({
-    id: userId,
-    name: `Test ${role}`,
-    email,
-    emailVerified: true,
-  });
+  await db()
+    .insert(user)
+    .values({
+      id: userId,
+      name: `Test ${role}`,
+      email,
+      emailVerified: true,
+    });
 
   await db().insert(member).values({
     id: randomUUID(),
@@ -61,12 +65,14 @@ export async function createTestOrganization(
     role,
   });
 
-  await db().insert(organizationSettings).values({
-    organizationId,
-    brandName: `Test Org ${suffix}`,
-    defaultCurrency: 'INR',
-    defaultTimezone: 'Asia/Kolkata',
-  });
+  await db()
+    .insert(organizationSettings)
+    .values({
+      organizationId,
+      brandName: `Test Org ${suffix}`,
+      defaultCurrency: 'INR',
+      defaultTimezone: 'Asia/Kolkata',
+    });
 
   createdOrganizationIds.push(organizationId);
 
@@ -116,10 +122,7 @@ export async function createTestEvent(
         (options.format ?? 'in_person') === 'online'
           ? null
           : { venueName: 'Test Venue', city: 'Bengaluru' },
-      access:
-        (options.format ?? 'in_person') === 'online'
-          ? { platform: 'Test Stream' }
-          : null,
+      access: (options.format ?? 'in_person') === 'online' ? { platform: 'Test Stream' } : null,
     },
     actorUserId,
   );
@@ -200,25 +203,45 @@ export async function cleanupFixtures(): Promise<void> {
       const org = organizationId;
 
       // Admissions and credentials first.
-      await tx.execute(sql`delete from check_in_attempts where event_id in (select id from events where organization_id = ${org})`);
-      await tx.execute(sql`delete from tickets where event_id in (select id from events where organization_id = ${org})`);
-      await tx.execute(sql`delete from refund_items where refund_id in (select id from refunds where organization_id = ${org})`);
+      await tx.execute(
+        sql`delete from check_in_attempts where event_id in (select id from events where organization_id = ${org})`,
+      );
+      await tx.execute(
+        sql`delete from tickets where event_id in (select id from events where organization_id = ${org})`,
+      );
+      await tx.execute(
+        sql`delete from refund_items where refund_id in (select id from refunds where organization_id = ${org})`,
+      );
       await tx.execute(sql`delete from refunds where organization_id = ${org}`);
       await tx.execute(sql`delete from payments where organization_id = ${org}`);
-      await tx.execute(sql`delete from webhook_events where payload_summary->>'organizationId' = ${org}`);
+      await tx.execute(
+        sql`delete from webhook_events where payload_summary->>'organizationId' = ${org}`,
+      );
 
       // Then the order graph.
-      await tx.execute(sql`delete from attendees where order_id in (select id from orders where organization_id = ${org})`);
-      await tx.execute(sql`delete from order_items where order_id in (select id from orders where organization_id = ${org})`);
+      await tx.execute(
+        sql`delete from attendees where order_id in (select id from orders where organization_id = ${org})`,
+      );
+      await tx.execute(
+        sql`delete from order_items where order_id in (select id from orders where organization_id = ${org})`,
+      );
       await tx.execute(sql`delete from orders where organization_id = ${org}`);
 
       // Operations, then the catalogue, then the organization itself.
       await tx.execute(sql`delete from email_outbox where organization_id = ${org}`);
       await tx.execute(sql`delete from audit_logs where organization_id = ${org}`);
-      await tx.execute(sql`delete from event_sessions where event_id in (select id from events where organization_id = ${org})`);
-      await tx.execute(sql`delete from event_locations where event_id in (select id from events where organization_id = ${org})`);
-      await tx.execute(sql`delete from event_access where event_id in (select id from events where organization_id = ${org})`);
-      await tx.execute(sql`delete from ticket_types where event_id in (select id from events where organization_id = ${org})`);
+      await tx.execute(
+        sql`delete from event_sessions where event_id in (select id from events where organization_id = ${org})`,
+      );
+      await tx.execute(
+        sql`delete from event_locations where event_id in (select id from events where organization_id = ${org})`,
+      );
+      await tx.execute(
+        sql`delete from event_access where event_id in (select id from events where organization_id = ${org})`,
+      );
+      await tx.execute(
+        sql`delete from ticket_types where event_id in (select id from events where organization_id = ${org})`,
+      );
       await tx.execute(sql`delete from events where organization_id = ${org}`);
 
       await tx.execute(sql`delete from organization_settings where organization_id = ${org}`);

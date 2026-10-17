@@ -68,8 +68,12 @@ const totalRemaining = sellable.reduce((sum, type) => sum + type.available, 0);
 
     <div class="container-page pb-10 pt-10 sm:pb-14 sm:pt-14" data-hero>
       <nav class="mb-8 text-xs text-[var(--color-ink-muted)]" aria-label="Breadcrumb">
-        <a href="/events" class="transition-colors hover:text-[var(--color-ink)]">Events</a>
-        <span class="mx-2" aria-hidden="true">/</span>
+        <a href="/events" class="transition-colors hover:text-[var(--color-ink)]">
+          Events
+        </a>
+        <span class="mx-2" aria-hidden="true">
+          /
+        </span>
         <span>{event.title}</span>
       </nav>
 
@@ -81,20 +85,22 @@ const totalRemaining = sellable.reduce((sum, type) => sum + type.available, 0);
         {allSoldOut && <span class="badge bg-red-500/90 text-white">Sold out</span>}
       </div>
 
-      <h1 class="display mt-5 max-w-4xl text-[var(--color-ink)]" data-hero-item="up" style="font-size: clamp(2.75rem, 7vw, 6rem); line-height: 0.9;">
+      <h1
+        class="display mt-5 max-w-4xl text-[var(--color-ink)]"
+        data-hero-item="up"
+        style="font-size: clamp(2.75rem, 7vw, 6rem); line-height: 0.9;"
+      >
         {event.title}
       </h1>
 
-      {
-        event.summary && (
-          <p
-            class="measure mt-5 text-base leading-relaxed text-[var(--color-ink-muted)] sm:text-lg"
-            data-hero-item="up"
-          >
-            {event.summary}
-          </p>
-        )
-      }
+      {event.summary && (
+        <p
+          class="measure mt-5 text-base leading-relaxed text-[var(--color-ink-muted)] sm:text-lg"
+          data-hero-item="up"
+        >
+          {event.summary}
+        </p>
+      )}
 
       <!-- Meta rail: the three facts a buyer checks before reading anything else. -->
       <dl
@@ -107,7 +113,8 @@ const totalRemaining = sellable.reduce((sum, type) => sum + type.available, 0);
             {formatLongDate(event.startsAt, event.timezone)}
           </dd>
           <dd class="mt-1 text-xs text-[var(--color-ink-muted)]">
-            {formatTime(event.startsAt, event.timezone)} – {formatTime(event.endsAt, event.timezone)} · {event.timezone}
+            {formatTime(event.startsAt, event.timezone)} –{' '}
+            {formatTime(event.endsAt, event.timezone)} · {event.timezone}
           </dd>
         </div>
 
@@ -125,7 +132,11 @@ const totalRemaining = sellable.reduce((sum, type) => sum + type.available, 0);
         <div class="bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] p-4 backdrop-blur-sm">
           <dt class="eyebrow-plain">Tickets</dt>
           <dd class="mt-2 text-sm font-medium leading-snug text-[var(--color-ink)]">
-            {cheapest === null ? 'See details' : cheapest === 0 ? 'Free' : `From ${formatMoney(cheapest, ticketTypes[0]?.currency ?? site.defaultCurrency)}`}
+            {cheapest === null
+              ? 'See details'
+              : cheapest === 0
+                ? 'Free'
+                : `From ${formatMoney(cheapest, ticketTypes[0]?.currency ?? site.defaultCurrency)}`}
           </dd>
           <dd class="mt-1 text-xs text-[var(--color-ink-muted)]">
             {allSoldOut ? 'Sold out' : `${totalRemaining} remaining`}
@@ -138,89 +149,88 @@ const totalRemaining = sellable.reduce((sum, type) => sum + type.available, 0);
   <!-- ── Body ──────────────────────────────────────────────────────────────── -->
   <div class="container-page mt-4 grid gap-12 pb-20 lg:grid-cols-[1.55fr_1fr] lg:gap-16">
     <div class="min-w-0">
-      {
-        event.description && (
-          <section data-reveal="up">
-            <h2 class="display display-md text-[var(--color-ink)]">About this event</h2>
-            <div class="measure mt-4 space-y-4 whitespace-pre-line text-[0.9375rem] leading-relaxed text-[var(--color-ink-muted)]">
-              {event.description}
-            </div>
-          </section>
-        )
-      }
+      {event.description && (
+        <section data-reveal="up">
+          <h2 class="display display-md text-[var(--color-ink)]">About this event</h2>
+          <div class="measure mt-4 space-y-4 whitespace-pre-line text-[0.9375rem] leading-relaxed text-[var(--color-ink-muted)]">
+            {event.description}
+          </div>
+        </section>
+      )}
 
-      {
-        access?.publicNote && (
-          <section class="mt-10" data-reveal="up">
-            <div class="card-lit p-5">
-              <p class="eyebrow">{access.platform}</p>
-              <p class="mt-3 text-sm leading-relaxed text-[var(--color-ink-muted)]">
-                {access.publicNote}
-              </p>
-              <p class="mt-2 text-xs text-[var(--color-ink-faint)]">
-                Joining instructions are shared with confirmed attendees only.
-              </p>
-            </div>
-          </section>
-        )
-      }
+      {access?.publicNote && (
+        <section class="mt-10" data-reveal="up">
+          <div class="card-lit p-5">
+            <p class="eyebrow">{access.platform}</p>
+            <p class="mt-3 text-sm leading-relaxed text-[var(--color-ink-muted)]">
+              {access.publicNote}
+            </p>
+            <p class="mt-2 text-xs text-[var(--color-ink-faint)]">
+              Joining instructions are shared with confirmed attendees only.
+            </p>
+          </div>
+        </section>
+      )}
 
-      {
-        sessions.length > 0 && (
-          <section class="mt-12" data-reveal="up">
-            <h2 class="display display-md text-[var(--color-ink)]">Schedule</h2>
-            <ol class="mt-5 space-y-3">
-              {sessions.map((session, index) => (
-                <li class="card p-4">
-                  <div class="flex flex-wrap items-baseline justify-between gap-2">
-                    <div class="flex items-baseline gap-3">
-                      <span class="display text-lg text-[var(--color-brand-accent)]">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      <h3 class="font-medium">{session.title}</h3>
-                    </div>
-                    <p class="text-xs tabular-nums text-[var(--color-ink-muted)]">
-                      {formatTime(session.startsAt, event.timezone)} – {formatTime(session.endsAt, event.timezone)}
-                    </p>
+      {sessions.length > 0 && (
+        <section class="mt-12" data-reveal="up">
+          <h2 class="display display-md text-[var(--color-ink)]">Schedule</h2>
+          <ol class="mt-5 space-y-3">
+            {sessions.map((session, index) => (
+              <li class="card p-4">
+                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                  <div class="flex items-baseline gap-3">
+                    <span class="display text-lg text-[var(--color-brand-accent)]">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <h3 class="font-medium">{session.title}</h3>
                   </div>
-                  {session.speakerName && (
-                    <p class="mt-1.5 pl-9 text-sm text-[var(--color-ink-muted)]">
-                      {session.speakerName}
-                      {session.room ? ` · ${session.room}` : ''}
-                    </p>
-                  )}
-                  {session.description && (
-                    <p class="mt-2 pl-9 text-sm leading-relaxed text-[var(--color-ink-faint)]">
-                      {session.description}
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </section>
-        )
-      }
+                  <p class="text-xs tabular-nums text-[var(--color-ink-muted)]">
+                    {formatTime(session.startsAt, event.timezone)} –{' '}
+                    {formatTime(session.endsAt, event.timezone)}
+                  </p>
+                </div>
+                {session.speakerName && (
+                  <p class="mt-1.5 pl-9 text-sm text-[var(--color-ink-muted)]">
+                    {session.speakerName}
+                    {session.room ? ` · ${session.room}` : ''}
+                  </p>
+                )}
+                {session.description && (
+                  <p class="mt-2 pl-9 text-sm leading-relaxed text-[var(--color-ink-faint)]">
+                    {session.description}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
-      {
-        location && (
-          <section class="mt-12" data-reveal="up">
-            <h2 class="display display-md text-[var(--color-ink)]">Venue</h2>
-            <div class="card mt-4 p-5">
-              <p class="font-medium">{location.venueName}</p>
-              <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
-                {[location.streetAddress, location.city, location.region, location.postalCode, location.country]
-                  .filter(Boolean)
-                  .join(', ')}
+      {location && (
+        <section class="mt-12" data-reveal="up">
+          <h2 class="display display-md text-[var(--color-ink)]">Venue</h2>
+          <div class="card mt-4 p-5">
+            <p class="font-medium">{location.venueName}</p>
+            <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+              {[
+                location.streetAddress,
+                location.city,
+                location.region,
+                location.postalCode,
+                location.country,
+              ]
+                .filter(Boolean)
+                .join(', ')}
+            </p>
+            {location.directions && (
+              <p class="mt-3 text-sm leading-relaxed text-[var(--color-ink-faint)]">
+                {location.directions}
               </p>
-              {location.directions && (
-                <p class="mt-3 text-sm leading-relaxed text-[var(--color-ink-faint)]">
-                  {location.directions}
-                </p>
-              )}
-            </div>
-          </section>
-        )
-      }
+            )}
+          </div>
+        </section>
+      )}
     </div>
 
     <!-- ── Tickets ───────────────────────────────────────────────────────── -->
@@ -231,71 +241,67 @@ const totalRemaining = sellable.reduce((sum, type) => sum + type.available, 0);
           <h2 class="display display-md mt-3 text-[var(--color-ink)]">Tickets</h2>
         </div>
 
-        {
-          ticketTypes.length === 0 ? (
-            <p class="p-5 text-sm text-[var(--color-ink-muted)]">
-              Ticket categories have not been published yet.
-            </p>
-          ) : (
-            <ul class="divide-y divide-[var(--color-line)]">
-              {ticketTypes.map((type) => {
-                const available = type.onSale && type.available > 0;
+        {ticketTypes.length === 0 ? (
+          <p class="p-5 text-sm text-[var(--color-ink-muted)]">
+            Ticket categories have not been published yet.
+          </p>
+        ) : (
+          <ul class="divide-y divide-[var(--color-line)]">
+            {ticketTypes.map((type) => {
+              const available = type.onSale && type.available > 0;
 
-                return (
-                  <li class="p-5">
-                    <div class="flex items-start justify-between gap-4">
-                      <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                          <h3 class="text-sm font-semibold">{type.name}</h3>
-                          {available && type.available <= 10 && (
-                            <StatusBadge label={`${type.available} left`} tone="warning" />
-                          )}
-                          {!available && (
-                            <StatusBadge
-                              label={type.available <= 0 ? 'Sold out' : 'Not on sale'}
-                              tone="neutral"
-                            />
-                          )}
-                        </div>
-                        {type.description && (
-                          <p class="mt-1 text-[0.8125rem] leading-relaxed text-[var(--color-ink-muted)]">
-                            {type.description}
-                          </p>
+              return (
+                <li class="p-5">
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="min-w-0">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="text-sm font-semibold">{type.name}</h3>
+                        {available && type.available <= 10 && (
+                          <StatusBadge label={`${type.available} left`} tone="warning" />
                         )}
-                        <p class="mt-1.5 text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-faint)]">
-                          Limit {type.minPerOrder}–{type.maxPerOrder} per order
-                        </p>
+                        {!available && (
+                          <StatusBadge
+                            label={type.available <= 0 ? 'Sold out' : 'Not on sale'}
+                            tone="neutral"
+                          />
+                        )}
                       </div>
-
-                      <p class="shrink-0 text-right text-sm font-semibold tabular-nums">
-                        {type.priceMinor === 0 ? 'Free' : formatMoney(type.priceMinor, type.currency)}
+                      {type.description && (
+                        <p class="mt-1 text-[0.8125rem] leading-relaxed text-[var(--color-ink-muted)]">
+                          {type.description}
+                        </p>
+                      )}
+                      <p class="mt-1.5 text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-faint)]">
+                        Limit {type.minPerOrder}–{type.maxPerOrder} per order
                       </p>
                     </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )
-        }
+
+                    <p class="shrink-0 text-right text-sm font-semibold tabular-nums">
+                      {type.priceMinor === 0 ? 'Free' : formatMoney(type.priceMinor, type.currency)}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         <div class="border-t border-[var(--color-line)] p-5">
-          {
-            registrationAllowed && !allSoldOut && ticketTypes.length > 0 ? (
-              <a href={`/register/${event.slug}`} class="btn btn-primary w-full">
-                {cheapest === 0 ? 'Register' : 'Register and pay'}
-              </a>
-            ) : (
-              <p class="text-sm text-[var(--color-ink-muted)]">
-                {allSoldOut
-                  ? 'All tickets for this event have been taken.'
-                  : registrationNotOpen
-                    ? 'Registration has not opened yet.'
-                    : registrationClosed
-                      ? 'Registration for this event has closed.'
-                      : 'Registration is not available.'}
-              </p>
-            )
-          }
+          {registrationAllowed && !allSoldOut && ticketTypes.length > 0 ? (
+            <a href={`/register/${event.slug}`} class="btn btn-primary w-full">
+              {cheapest === 0 ? 'Register' : 'Register and pay'}
+            </a>
+          ) : (
+            <p class="text-sm text-[var(--color-ink-muted)]">
+              {allSoldOut
+                ? 'All tickets for this event have been taken.'
+                : registrationNotOpen
+                  ? 'Registration has not opened yet.'
+                  : registrationClosed
+                    ? 'Registration for this event has closed.'
+                    : 'Registration is not available.'}
+            </p>
+          )}
 
           <div class="mt-5 space-y-2.5 border-t border-[var(--color-line)] pt-4 text-xs text-[var(--color-ink-muted)]">
             <div class="flex items-start justify-between gap-3">

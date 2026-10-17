@@ -28,7 +28,9 @@ export async function runOnce(): Promise<void> {
   // the dashboard agree about what is still upcoming.
   const completed = await completePastEvents();
   if (completed > 0) {
-    console.log(`[expire-orders] marked ${completed} finished event${completed === 1 ? '' : 's'} complete`);
+    console.log(
+      `[expire-orders] marked ${completed} finished event${completed === 1 ? '' : 's'} complete`,
+    );
   }
 }
 

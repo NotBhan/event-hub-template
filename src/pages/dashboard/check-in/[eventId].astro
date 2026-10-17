@@ -37,7 +37,11 @@ try {
 const stats = await getCheckInStats(event.id);
 ---
 
-<DashboardLayout title={`Scanner · ${event.title}`} description="Admission scanner" section="check-in">
+<DashboardLayout
+  title={`Scanner · ${event.title}`}
+  description="Admission scanner"
+  section="check-in"
+>
   <div class="mx-auto max-w-2xl">
     <nav class="mb-5 text-sm" aria-label="Breadcrumb">
       <a href="/dashboard/check-in" class="text-[var(--color-ink-muted)] hover:underline">
@@ -59,7 +63,9 @@ const stats = await getCheckInStats(event.id);
         <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
           Admitted
         </p>
-        <p class="mt-1 text-2xl font-semibold" data-stat-admitted>{stats.admitted}</p>
+        <p class="mt-1 text-2xl font-semibold" data-stat-admitted>
+          {stats.admitted}
+        </p>
       </div>
       <div class="card p-3 text-center">
         <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
@@ -71,7 +77,9 @@ const stats = await getCheckInStats(event.id);
         <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
           Repeat scans
         </p>
-        <p class="mt-1 text-2xl font-semibold" data-stat-duplicates>{stats.duplicates}</p>
+        <p class="mt-1 text-2xl font-semibold" data-stat-duplicates>
+          {stats.duplicates}
+        </p>
       </div>
     </section>
 
@@ -82,7 +90,9 @@ const stats = await getCheckInStats(event.id);
       aria-live="assertive"
       style="border-color: var(--color-line);"
     >
-      <p class="text-lg font-semibold" data-result-title>Ready to scan</p>
+      <p class="text-lg font-semibold" data-result-title>
+        Ready to scan
+      </p>
       <p class="mt-1 text-sm text-[var(--color-ink-muted)]" data-result-detail>
         Point the camera at the attendee's QR code.
       </p>
@@ -109,8 +119,12 @@ const stats = await getCheckInStats(event.id);
       </div>
 
       <div class="flex flex-wrap gap-2 p-4">
-        <button type="button" class="btn btn-primary btn-sm" data-start>Start camera</button>
-        <button type="button" class="btn btn-secondary btn-sm" data-stop disabled>Stop camera</button>
+        <button type="button" class="btn btn-primary btn-sm" data-start>
+          Start camera
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" data-stop disabled>
+          Stop camera
+        </button>
         <button type="button" class="btn btn-ghost btn-sm" data-sound-toggle aria-pressed="true">
           Sound on
         </button>
@@ -121,7 +135,9 @@ const stats = await getCheckInStats(event.id);
       <summary class="cursor-pointer text-sm font-medium">Enter a code manually</summary>
       <form class="mt-4 flex flex-wrap items-end gap-2" data-manual-form>
         <div class="min-w-56 flex-1">
-          <label class="label" for="manual-token">Ticket code</label>
+          <label class="label" for="manual-token">
+            Ticket code
+          </label>
           <input
             id="manual-token"
             name="token"
@@ -130,7 +146,9 @@ const stats = await getCheckInStats(event.id);
             autocomplete="off"
           />
         </div>
-        <button type="submit" class="btn btn-secondary btn-sm">Check ticket</button>
+        <button type="submit" class="btn btn-secondary btn-sm">
+          Check ticket
+        </button>
       </form>
       <p class="help-text">
         Useful when a screen is cracked or the camera is unavailable. The code is printed with the

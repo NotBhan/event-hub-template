@@ -33,80 +33,74 @@ function isCurrent(href: string): boolean {
 <header class="sticky top-0 z-40 border-b border-[var(--color-line)] bg-[color-mix(in_srgb,var(--color-canvas)_82%,transparent)] backdrop-blur-xl">
   <nav class="container-page flex items-center justify-between gap-4 py-3.5" aria-label="Main">
     <a href="/" class="group flex items-center gap-2.5">
-      {
-        branding?.logoUrl ? (
-          <img src={branding.logoUrl} alt="" class="h-8 w-8 rounded-lg" width="32" height="32" />
-        ) : (
-          <img
-            src={site.logo}
-            alt=""
-            class="h-8 w-8 rounded-lg transition-transform duration-300 group-hover:scale-105"
-            width="32"
-            height="32"
-          />
-        )
-      }
+      {branding?.logoUrl ? (
+        <img src={branding.logoUrl} alt="" class="h-8 w-8 rounded-lg" width="32" height="32" />
+      ) : (
+        <img
+          src={site.logo}
+          alt=""
+          class="h-8 w-8 rounded-lg transition-transform duration-300 group-hover:scale-105"
+          width="32"
+          height="32"
+        />
+      )}
       <span class="text-[0.9375rem] font-semibold tracking-tight">{brandName}</span>
     </a>
 
     <div class="flex items-center gap-1.5">
       <ul class="hidden items-center gap-1 md:flex">
-        {
-          links.map((link) => (
-            <li>
-              <a
-                href={link.href}
-                class:list={[
-                  'rounded-full px-3.5 py-2 text-[0.8125rem] font-medium tracking-wide transition-colors',
-                  isCurrent(link.href)
-                    ? 'bg-[color-mix(in_srgb,var(--color-ink)_10%,transparent)] text-[var(--color-ink)]'
-                    : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]',
-                ]}
-                aria-current={isCurrent(link.href) ? 'page' : undefined}
-              >
-                {link.label}
-              </a>
-            </li>
-          ))
-        }
+        {links.map((link) => (
+          <li>
+            <a
+              href={link.href}
+              class:list={[
+                'rounded-full px-3.5 py-2 text-[0.8125rem] font-medium tracking-wide transition-colors',
+                isCurrent(link.href)
+                  ? 'bg-[color-mix(in_srgb,var(--color-ink)_10%,transparent)] text-[var(--color-ink)]'
+                  : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]',
+              ]}
+              aria-current={isCurrent(link.href) ? 'page' : undefined}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))}
       </ul>
 
-      {
-        user ? (
-          <form method="POST" action="/logout" class="flex items-center gap-2">
-            <a href="/account/tickets" class="btn btn-secondary btn-sm md:hidden">
-              Tickets
-            </a>
-            <button type="submit" class="btn btn-ghost btn-sm">
-              Sign out
-            </button>
-          </form>
-        ) : (
-          <a href="/login" class="btn btn-primary btn-sm">Sign in</a>
-        )
-      }
+      {user ? (
+        <form method="POST" action="/logout" class="flex items-center gap-2">
+          <a href="/account/tickets" class="btn btn-secondary btn-sm md:hidden">
+            Tickets
+          </a>
+          <button type="submit" class="btn btn-ghost btn-sm">
+            Sign out
+          </button>
+        </form>
+      ) : (
+        <a href="/login" class="btn btn-primary btn-sm">
+          Sign in
+        </a>
+      )}
     </div>
   </nav>
 
   <div class="border-t border-[var(--color-line)] md:hidden">
     <ul class="container-page flex items-center gap-1 overflow-x-auto py-2">
-      {
-        links.map((link) => (
-          <li>
-            <a
-              href={link.href}
-              class:list={[
-                'block whitespace-nowrap rounded-full px-3 py-1.5 text-[0.8125rem] font-medium',
-                isCurrent(link.href)
-                  ? 'bg-[color-mix(in_srgb,var(--color-ink)_10%,transparent)] text-[var(--color-ink)]'
-                  : 'text-[var(--color-ink-muted)]',
-              ]}
-            >
-              {link.label}
-            </a>
-          </li>
-        ))
-      }
+      {links.map((link) => (
+        <li>
+          <a
+            href={link.href}
+            class:list={[
+              'block whitespace-nowrap rounded-full px-3 py-1.5 text-[0.8125rem] font-medium',
+              isCurrent(link.href)
+                ? 'bg-[color-mix(in_srgb,var(--color-ink)_10%,transparent)] text-[var(--color-ink)]'
+                : 'text-[var(--color-ink-muted)]',
+            ]}
+          >
+            {link.label}
+          </a>
+        </li>
+      ))}
     </ul>
   </div>
 </header>

@@ -68,76 +68,78 @@ const ticketConfig = sellable.map((type) => ({
     <h1 class="display display-lg text-[var(--color-ink)]">Register</h1>
     <p class="mt-2 text-sm text-[var(--color-ink-muted)]">{when}</p>
 
-    {
-      fieldErrors._form && (
-        <p
-          class="mt-6 rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-4 text-sm text-red-800"
-          data-error-summary
-        >
-          {fieldErrors._form}
-        </p>
-      )
-    }
+    {fieldErrors._form && (
+      <p
+        class="mt-6 rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+        data-error-summary
+      >
+        {fieldErrors._form}
+      </p>
+    )}
 
     <div
       class="mt-6 hidden rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-4 text-sm text-red-800"
       data-error-summary-live
       role="alert"
-    >
-    </div>
+    ></div>
 
-    <form method="POST" action={actions.createRegistration} class="mt-6 space-y-8" data-registration-form>
+    <form
+      method="POST"
+      action={actions.createRegistration}
+      class="mt-6 space-y-8"
+      data-registration-form
+    >
       <input type="hidden" name="slug" value={event.slug} />
 
       <section class="card p-5">
         <h2 class="text-lg font-semibold">Choose your tickets</h2>
 
         <div class="mt-4 space-y-4">
-          {
-            sellable.map((type) => (
-              <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--color-line)] pb-4 last:border-b-0 last:pb-0">
-                <div class="min-w-0">
-                  <p class="font-medium">{type.name}</p>
-                  {type.description && (
-                    <p class="mt-0.5 text-sm text-[var(--color-ink-muted)]">{type.description}</p>
-                  )}
-                  <p class="mt-1 text-xs text-[var(--color-ink-muted)]">
-                    {type.available <= 10 ? `Only ${type.available} left · ` : ''}
-                    Limit {type.minPerOrder}–{type.maxPerOrder} per order
-                  </p>
-                </div>
+          {sellable.map((type) => (
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--color-line)] pb-4 last:border-b-0 last:pb-0">
+              <div class="min-w-0">
+                <p class="font-medium">{type.name}</p>
+                {type.description && (
+                  <p class="mt-0.5 text-sm text-[var(--color-ink-muted)]">{type.description}</p>
+                )}
+                <p class="mt-1 text-xs text-[var(--color-ink-muted)]">
+                  {type.available <= 10 ? `Only ${type.available} left · ` : ''}
+                  Limit {type.minPerOrder}–{type.maxPerOrder} per order
+                </p>
+              </div>
 
-                <div class="flex items-center gap-3">
-                  <p class="text-sm font-semibold">
-                    {type.priceMinor === 0 ? 'Free' : formatMoney(type.priceMinor, type.currency)}
-                  </p>
-                  <label class="sr-only" for={`quantity-${type.id}`}>
-                    Number of {type.name} tickets
-                  </label>
-                  <input
-                    id={`quantity-${type.id}`}
-                    name={`quantity__${type.id}`}
-                    type="number"
-                    inputmode="numeric"
-                    /* Zero means "none of this type", so the field itself is always
+              <div class="flex items-center gap-3">
+                <p class="text-sm font-semibold">
+                  {type.priceMinor === 0 ? 'Free' : formatMoney(type.priceMinor, type.currency)}
+                </p>
+                <label class="sr-only" for={`quantity-${type.id}`}>
+                  Number of {type.name} tickets
+                </label>
+                <input
+                  id={`quantity-${type.id}`}
+                  name={`quantity__${type.id}`}
+                  type="number"
+                  inputmode="numeric"
+                  /* Zero means "none of this type", so the field itself is always
                        valid. The per-order minimum is enforced by the server for
                        whatever quantity the buyer actually chooses. */
-                    min="0"
-                    max={Math.min(type.maxPerOrder, type.available)}
-                    step="1"
-                    value={formValues[`quantity__${type.id}`] ?? '0'}
-                    class="input w-20 text-center"
-                    data-quantity={type.id}
-                  />
-                </div>
+                  min="0"
+                  max={Math.min(type.maxPerOrder, type.available)}
+                  step="1"
+                  value={formValues[`quantity__${type.id}`] ?? '0'}
+                  class="input w-20 text-center"
+                  data-quantity={type.id}
+                />
               </div>
-            ))
-          }
+            </div>
+          ))}
         </div>
 
         {quantityErrors.length > 0 && (
           <ul class="mt-3 space-y-1 text-sm text-red-700">
-            {quantityErrors.map(([, message]) => <li>{message}</li>)}
+            {quantityErrors.map(([, message]) => (
+              <li>{message}</li>
+            ))}
           </ul>
         )}
       </section>
@@ -150,7 +152,9 @@ const ticketConfig = sellable.map((type) => ({
 
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
           <div class="sm:col-span-2">
-            <label class="label" for="buyerName">Full name</label>
+            <label class="label" for="buyerName">
+              Full name
+            </label>
             <input
               id="buyerName"
               name="buyerName"
@@ -164,7 +168,9 @@ const ticketConfig = sellable.map((type) => ({
           </div>
 
           <div>
-            <label class="label" for="buyerEmail">Email</label>
+            <label class="label" for="buyerEmail">
+              Email
+            </label>
             <input
               id="buyerEmail"
               name="buyerEmail"
@@ -175,11 +181,15 @@ const ticketConfig = sellable.map((type) => ({
               value={formValues.buyerEmail ?? ''}
               aria-invalid={fieldErrors.buyerEmail ? 'true' : undefined}
             />
-            {fieldErrors.buyerEmail && <p class="help-text text-red-700">{fieldErrors.buyerEmail}</p>}
+            {fieldErrors.buyerEmail && (
+              <p class="help-text text-red-700">{fieldErrors.buyerEmail}</p>
+            )}
           </div>
 
           <div>
-            <label class="label" for="buyerPhone">Phone <span class="font-normal">(optional)</span></label>
+            <label class="label" for="buyerPhone">
+              Phone <span class="font-normal">(optional)</span>
+            </label>
             <input
               id="buyerPhone"
               name="buyerPhone"
@@ -189,7 +199,9 @@ const ticketConfig = sellable.map((type) => ({
               value={formValues.buyerPhone ?? ''}
               aria-invalid={fieldErrors.buyerPhone ? 'true' : undefined}
             />
-            {fieldErrors.buyerPhone && <p class="help-text text-red-700">{fieldErrors.buyerPhone}</p>}
+            {fieldErrors.buyerPhone && (
+              <p class="help-text text-red-700">{fieldErrors.buyerPhone}</p>
+            )}
           </div>
         </div>
       </section>
@@ -215,11 +227,7 @@ const ticketConfig = sellable.map((type) => ({
       </div>
     </form>
 
-    <script
-      type="application/json"
-      id="ticket-config"
-      set:html={JSON.stringify(ticketConfig)}
-    />
+    <script type="application/json" id="ticket-config" set:html={JSON.stringify(ticketConfig)} />
   </div>
 </PublicLayout>
 
@@ -407,7 +415,9 @@ const ticketConfig = sellable.map((type) => ({
 
         showErrors(result.data?.fieldErrors ?? {});
       } catch {
-        showErrors({ _form: 'We could not reach the server. Please check your connection and try again.' });
+        showErrors({
+          _form: 'We could not reach the server. Please check your connection and try again.',
+        });
       }
 
       if (button) {

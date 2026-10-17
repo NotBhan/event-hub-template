@@ -46,9 +46,29 @@ export interface VerifiedWebhook {
   eventType: string;
   /** Normalised intent, so the payment service never parses provider payloads. */
   intent:
-    | { kind: 'payment_captured'; providerOrderId: string; providerPaymentId: string; amountMinor: number; currency: string; method?: string }
-    | { kind: 'payment_failed'; providerOrderId: string; providerPaymentId?: string; reason?: string }
-    | { kind: 'refund_processed'; providerRefundId: string; providerPaymentId: string; amountMinor: number; currency: string; status: 'succeeded' | 'failed'; reason?: string }
+    | {
+        kind: 'payment_captured';
+        providerOrderId: string;
+        providerPaymentId: string;
+        amountMinor: number;
+        currency: string;
+        method?: string;
+      }
+    | {
+        kind: 'payment_failed';
+        providerOrderId: string;
+        providerPaymentId?: string;
+        reason?: string;
+      }
+    | {
+        kind: 'refund_processed';
+        providerRefundId: string;
+        providerPaymentId: string;
+        amountMinor: number;
+        currency: string;
+        status: 'succeeded' | 'failed';
+        reason?: string;
+      }
     | { kind: 'ignored'; reason: string };
   /**
    * Redacted, non-sensitive summary kept for audit. Never the full provider body.

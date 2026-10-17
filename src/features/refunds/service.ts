@@ -15,7 +15,12 @@ import {
 import type { DbExecutor } from '@/lib/db/types';
 import { toNumber } from '@/lib/db/scalars';
 import { formatMoney } from '@/lib/money';
-import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '@/lib/security/errors';
+import {
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+} from '@/lib/security/errors';
 import { recordAudit } from '@/features/audit/service';
 import { paymentProvider, PaymentProviderError } from '@/features/payments/providers';
 import { finaliseRefund } from '@/features/payments/service';
@@ -101,11 +106,7 @@ export async function refundableBalance(
  */
 export async function requestRefund(input: RequestRefundInput): Promise<RefundRequestResult> {
   const prepared = await db().transaction(async (tx) => {
-    const [order] = await tx
-      .select()
-      .from(orders)
-      .where(eq(orders.id, input.orderId))
-      .limit(1);
+    const [order] = await tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
 
     if (!order) throw new NotFoundError('Order not found');
 
@@ -136,7 +137,12 @@ export async function requestRefund(input: RequestRefundInput): Promise<RefundRe
     const [payment] = await tx
       .select()
       .from(payments)
-      .where(and(eq(payments.orderId, order.id), inArray(payments.status, ['captured', 'partially_refunded'])))
+      .where(
+        and(
+          eq(payments.orderId, order.id),
+          inArray(payments.status, ['captured', 'partially_refunded']),
+        ),
+      )
       .orderBy(desc(payments.createdAt))
       .limit(1)
       .for('update');
@@ -304,14 +310,12 @@ async function submitRefundToProvider(
 
     return { refund: updated ?? refund, payment, settled: false };
   } catch (error) {
-    const message = error instanceof PaymentProviderError ? error.message : 'Refund submission failed';
+    const message =
+      error instanceof PaymentProviderError ? error.message : 'Refund submission failed';
 
     // Left in `requested` state on purpose: the intent is recorded and an
     // operator can retry, rather than the request vanishing.
-    await db()
-      .update(refunds)
-      .set({ failureReason: message })
-      .where(eq(refunds.id, refund.id));
+    await db().update(refunds).set({ failureReason: message }).where(eq(refunds.id, refund.id));
 
     console.error('Refund submission failed', { refundId: refund.id, error });
     return { refund: { ...refund, failureReason: message }, payment, settled: false };
@@ -343,14 +347,13 @@ function assertPolicyPermitsRefund(
   ticketCount: number,
 ): void {
   if (event.refundPolicy === 'no_refunds') {
-    throw new ConflictError(
-      event.refundPolicyNotes ?? 'This event does not allow refunds',
-    );
+    throw new ConflictError(event.refundPolicyNotes ?? 'This event does not allow refunds');
   }
 
   if (event.refundPolicy === 'custom' && ticketCount === 0) {
     throw new ConflictError(
-      event.refundPolicyNotes ?? 'This event handles refunds manually. Request a ticket-specific refund.',
+      event.refundPolicyNotes ??
+        'This event handles refunds manually. Request a ticket-specific refund.',
     );
   }
 

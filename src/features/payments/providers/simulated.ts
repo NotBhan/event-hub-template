@@ -108,7 +108,10 @@ export class SimulatedProvider implements PaymentProvider {
     outcome: 'success' | 'failure';
     method?: string;
   }): { providerPaymentId: string; signature: string } {
-    const order = this.open<{ r: string; a: number; c: string }>(stripPrefix(input.providerOrderId, 'simo_'), 'Simulated order');
+    const order = this.open<{ r: string; a: number; c: string }>(
+      stripPrefix(input.providerOrderId, 'simo_'),
+      'Simulated order',
+    );
 
     const providerPaymentId = `simp_${this.seal({
       o: input.providerOrderId,
@@ -187,7 +190,8 @@ export class SimulatedProvider implements PaymentProvider {
           ? {
               kind: 'payment_failed',
               providerOrderId: String(data.providerOrderId ?? ''),
-              providerPaymentId: typeof data.providerPaymentId === 'string' ? data.providerPaymentId : undefined,
+              providerPaymentId:
+                typeof data.providerPaymentId === 'string' ? data.providerPaymentId : undefined,
               reason: typeof data.reason === 'string' ? data.reason : undefined,
             }
           : eventType === 'refund.processed' || eventType === 'refund.failed'

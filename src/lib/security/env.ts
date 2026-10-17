@@ -24,7 +24,10 @@ const envSchema = z
     DATABASE_URL: z
       .string()
       .min(1, 'DATABASE_URL is required')
-      .refine((value) => /^postgres(ql)?:\/\//.test(value), 'DATABASE_URL must be a postgres:// connection string'),
+      .refine(
+        (value) => /^postgres(ql)?:\/\//.test(value),
+        'DATABASE_URL must be a postgres:// connection string',
+      ),
     DATABASE_MIGRATION_URL: z.string().optional(),
 
     BETTER_AUTH_SECRET: z
@@ -52,7 +55,12 @@ const envSchema = z
     SMTP_USER: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
 
-    ORDER_RESERVATION_MINUTES: z.coerce.number().int().positive().max(24 * 60).default(30),
+    ORDER_RESERVATION_MINUTES: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(24 * 60)
+      .default(30),
 
     /** Defaults used by `npm run provision` on a fresh installation. */
     PROVISION_ORG_NAME: z.string().optional(),
@@ -61,7 +69,11 @@ const envSchema = z
   })
   .superRefine((env, ctx) => {
     if (env.PAYMENT_PROVIDER === 'razorpay') {
-      for (const key of ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET'] as const) {
+      for (const key of [
+        'RAZORPAY_KEY_ID',
+        'RAZORPAY_KEY_SECRET',
+        'RAZORPAY_WEBHOOK_SECRET',
+      ] as const) {
         if (!env[key]) {
           ctx.addIssue({
             code: 'custom',
@@ -111,7 +123,9 @@ export function serverEnv(): ServerEnv {
     const details = parsed.error.issues
       .map((issue) => `  - ${issue.path.join('.') || '(root)'}: ${issue.message}`)
       .join('\n');
-    throw new Error(`Invalid environment configuration:\n${details}\n\nSee .env.example for the expected values.`);
+    throw new Error(
+      `Invalid environment configuration:\n${details}\n\nSee .env.example for the expected values.`,
+    );
   }
 
   cached = parsed.data;

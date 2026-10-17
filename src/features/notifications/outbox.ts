@@ -37,14 +37,10 @@ export async function enqueueEmail(
   input: EnqueueEmailInput,
 ): Promise<string> {
   const base = defaultTemplateContext();
-  const rendered = renderEmail(
-    input.type,
-    input.data,
-    {
-      siteUrl: input.renderContext?.siteUrl ?? base.siteUrl,
-      brandName: input.renderContext?.brandName ?? base.brandName,
-    },
-  );
+  const rendered = renderEmail(input.type, input.data, {
+    siteUrl: input.renderContext?.siteUrl ?? base.siteUrl,
+    brandName: input.renderContext?.brandName ?? base.brandName,
+  });
 
   const [row] = await executor
     .insert(emailOutbox)
@@ -86,7 +82,9 @@ export interface ProcessOutboxResult {
  * Rows are claimed with `FOR UPDATE SKIP LOCKED`, so several workers can run
  * concurrently without sending the same message twice.
  */
-export async function processOutbox(options: ProcessOutboxOptions = {}): Promise<ProcessOutboxResult> {
+export async function processOutbox(
+  options: ProcessOutboxOptions = {},
+): Promise<ProcessOutboxResult> {
   const limit = options.limit ?? 25;
   const now = options.now ?? new Date();
   const log = options.log ?? (() => {});
@@ -120,11 +118,7 @@ export async function processOutbox(options: ProcessOutboxOptions = {}): Promise
   for (const id of claimed) {
     result.attempted += 1;
 
-    const [entry] = await db()
-      .select()
-      .from(emailOutbox)
-      .where(eq(emailOutbox.id, id))
-      .limit(1);
+    const [entry] = await db().select().from(emailOutbox).where(eq(emailOutbox.id, id)).limit(1);
 
     if (!entry) continue;
 

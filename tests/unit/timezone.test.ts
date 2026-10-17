@@ -23,7 +23,9 @@ describe('timezone conversion', () => {
   });
 
   it('handles a timezone with no offset', () => {
-    expect(wallClockToUtc('2026-03-14T18:00', 'UTC').toISOString()).toBe('2026-03-14T18:00:00.000Z');
+    expect(wallClockToUtc('2026-03-14T18:00', 'UTC').toISOString()).toBe(
+      '2026-03-14T18:00:00.000Z',
+    );
   });
 
   it('is correct on both sides of a daylight-saving change', () => {

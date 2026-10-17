@@ -101,9 +101,7 @@ export function assertRegistrationAccess(input: {
     if (safeEqual(candidate, input.order.accessTokenHash)) return;
   }
 
-  throw new ForbiddenError(
-    'Open the link from your confirmation email to view this registration.',
-  );
+  throw new ForbiddenError('Open the link from your confirmation email to view this registration.');
 }
 
 /** True when the caller may view the order. Non-throwing variant. */

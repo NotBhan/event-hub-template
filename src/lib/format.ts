@@ -72,7 +72,11 @@ function isSameDayInZone(a: Date, b: Date, timezone: string): boolean {
 }
 
 /** Short form for cards and tables, e.g. "Sat, 14 Mar 2026 · 6:00 pm". */
-export function formatCompactWindow(startsAt: Date, timezone: string, locale = site.locale): string {
+export function formatCompactWindow(
+  startsAt: Date,
+  timezone: string,
+  locale = site.locale,
+): string {
   return new Intl.DateTimeFormat(locale, {
     weekday: 'short',
     day: 'numeric',

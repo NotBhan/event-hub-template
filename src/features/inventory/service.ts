@@ -23,10 +23,9 @@ import { BadRequestError, ConflictError, NotFoundError, SoldOutError } from '@/l
  *     commit()   → reserved becomes sold (payment confirmed)
  */
 
-export function availableQuantity(ticketType: Pick<
-  TicketType,
-  'quantityTotal' | 'quantitySold' | 'quantityReserved'
->): number {
+export function availableQuantity(
+  ticketType: Pick<TicketType, 'quantityTotal' | 'quantitySold' | 'quantityReserved'>,
+): number {
   return ticketType.quantityTotal - ticketType.quantitySold - ticketType.quantityReserved;
 }
 
@@ -188,7 +187,11 @@ export async function getTicketType(
   ticketTypeId: string,
   options: { forUpdate?: boolean } = {},
 ): Promise<TicketType | undefined> {
-  const query = executor.select().from(ticketTypes).where(eq(ticketTypes.id, ticketTypeId)).limit(1);
+  const query = executor
+    .select()
+    .from(ticketTypes)
+    .where(eq(ticketTypes.id, ticketTypeId))
+    .limit(1);
   const rows = options.forUpdate ? await query.for('update') : await query;
   return rows[0];
 }
@@ -203,9 +206,9 @@ export async function listTicketTypes(eventId: string): Promise<TicketType[]> {
 }
 
 /** Ticket types that are currently purchasable, for the public event page. */
-export async function listSellableTicketTypes(eventId: string): Promise<
-  (TicketType & { available: number })[]
-> {
+export async function listSellableTicketTypes(
+  eventId: string,
+): Promise<(TicketType & { available: number })[]> {
   const rows = await listTicketTypes(eventId);
   const now = new Date();
 
@@ -239,7 +242,8 @@ export async function createTicketType(
   const min = input.minPerOrder ?? 1;
   const max = input.maxPerOrder ?? 10;
   if (min < 1) throw new BadRequestError('The minimum per order must be at least 1');
-  if (max < min) throw new BadRequestError('The maximum per order cannot be lower than the minimum');
+  if (max < min)
+    throw new BadRequestError('The maximum per order cannot be lower than the minimum');
 
   const [row] = await executor
     .insert(ticketTypes)
@@ -292,7 +296,8 @@ export async function updateTicketType(
 
   const min = input.minPerOrder ?? existing.minPerOrder;
   const max = input.maxPerOrder ?? existing.maxPerOrder;
-  if (max < min) throw new BadRequestError('The maximum per order cannot be lower than the minimum');
+  if (max < min)
+    throw new BadRequestError('The maximum per order cannot be lower than the minimum');
 
   const [row] = await executor
     .update(ticketTypes)

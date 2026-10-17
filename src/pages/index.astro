@@ -68,13 +68,19 @@ const totalTickets = featured.reduce((sum, row) => sum + (row.remainingTickets ?
 
           <h1 class="display display-hero mt-6 text-[var(--color-ink)]">
             <span class="block overflow-hidden pb-[0.06em]" data-hero-item="mask">
-              <span class="block" data-hero-line>Events</span>
+              <span class="block" data-hero-line>
+                Events
+              </span>
             </span>
             <span class="block overflow-hidden pb-[0.06em]" data-hero-item="mask">
-              <span class="block" data-hero-line>that move</span>
+              <span class="block" data-hero-line>
+                that move
+              </span>
             </span>
             <span class="block overflow-hidden pb-[0.06em]" data-hero-item="mask">
-              <span class="block text-gradient" data-hero-line>people.</span>
+              <span class="block text-gradient" data-hero-line>
+                people.
+              </span>
             </span>
           </h1>
 
@@ -82,76 +88,94 @@ const totalTickets = featured.reduce((sum, row) => sum + (row.remainingTickets ?
             class="measure mt-7 text-base leading-relaxed text-[var(--color-ink-muted)] sm:text-lg"
             data-hero-item="up"
           >
-            Discover, register and host events for communities, companies and creators. Every
-            ticket is a real reservation, every seat is counted once, and every door is scanned.
+            Discover, register and host events for communities, companies and creators. Every ticket
+            is a real reservation, every seat is counted once, and every door is scanned.
           </p>
 
           <div class="mt-9 flex flex-wrap items-center gap-3" data-hero-item="up">
             <a href="/events" class="btn btn-primary btn-lg">
               Browse events
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                aria-hidden="true"
+              >
                 <path d="M3 8h10M9 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </a>
-            <a href="/dashboard" class="btn btn-secondary btn-lg">Organize an event</a>
+            <a href="/dashboard" class="btn btn-secondary btn-lg">
+              Organize an event
+            </a>
           </div>
 
           <div class="mt-12 flex flex-wrap items-center gap-x-6 gap-y-2" data-hero-item="fade">
-            {
-              disciplines.map((discipline, index) => (
-                <>
-                  {index > 0 && <span class="text-[var(--color-ink-faint)]" aria-hidden="true">·</span>}
-                  <span class="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-[var(--color-ink-faint)]">
-                    {discipline}
+            {disciplines.map((discipline, index) => (
+              <>
+                {index > 0 && (
+                  <span class="text-[var(--color-ink-faint)]" aria-hidden="true">
+                    ·
                   </span>
-                </>
-              ))
-            }
+                )}
+                <span class="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-[var(--color-ink-faint)]">
+                  {discipline}
+                </span>
+              </>
+            ))}
           </div>
         </div>
 
         <!-- Floating detail card: a real event, not decoration. -->
-        {
-          lead && (
-            <div class="hidden lg:block" data-hero-item="up">
-              <a
-                href={`/events/${lead.slug}`}
-                class="group block rounded-[var(--radius-card)] border border-[var(--color-line-strong)] bg-[color-mix(in_srgb,var(--color-surface)_78%,transparent)] p-5 backdrop-blur-xl transition-colors hover:border-[var(--color-brand-accent)]"
-              >
-                <div class="flex items-center justify-between gap-3">
-                  <p class="eyebrow-plain">Next up</p>
-                  <span class="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[var(--color-neon)]">
-                    {lead.format === 'online' ? 'Online' : lead.format === 'hybrid' ? 'Hybrid' : 'In person'}
-                  </span>
-                </div>
+        {lead && (
+          <div class="hidden lg:block" data-hero-item="up">
+            <a
+              href={`/events/${lead.slug}`}
+              class="group block rounded-[var(--radius-card)] border border-[var(--color-line-strong)] bg-[color-mix(in_srgb,var(--color-surface)_78%,transparent)] p-5 backdrop-blur-xl transition-colors hover:border-[var(--color-brand-accent)]"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <p class="eyebrow-plain">Next up</p>
+                <span class="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[var(--color-neon)]">
+                  {lead.format === 'online'
+                    ? 'Online'
+                    : lead.format === 'hybrid'
+                      ? 'Hybrid'
+                      : 'In person'}
+                </span>
+              </div>
 
-                <p class="display display-md mt-4 text-[var(--color-ink)]">{lead.title}</p>
+              <p class="display display-md mt-4 text-[var(--color-ink)]">{lead.title}</p>
 
-                <div class="mt-4 space-y-1.5 text-[0.8125rem] text-[var(--color-ink-muted)]">
-                  <p>{featured[0]?.venueName ?? 'Online'}{featured[0]?.city ? `, ${featured[0].city}` : ''}</p>
-                  <p>
-                    {featured[0]?.remainingTickets !== null && featured[0]?.remainingTickets !== undefined
-                      ? `${featured[0].remainingTickets} seats remaining`
-                      : 'Registration open'}
-                  </p>
-                </div>
+              <div class="mt-4 space-y-1.5 text-[0.8125rem] text-[var(--color-ink-muted)]">
+                <p>
+                  {featured[0]?.venueName ?? 'Online'}
+                  {featured[0]?.city ? `, ${featured[0].city}` : ''}
+                </p>
+                <p>
+                  {featured[0]?.remainingTickets !== null &&
+                  featured[0]?.remainingTickets !== undefined
+                    ? `${featured[0].remainingTickets} seats remaining`
+                    : 'Registration open'}
+                </p>
+              </div>
 
-                <div class="mt-5 flex items-center justify-between border-t border-[var(--color-line)] pt-4">
-                  <span class="text-sm font-semibold">
-                    {featured[0]?.cheapestPriceMinor === 0
-                      ? 'Free'
-                      : featured[0]?.cheapestPriceMinor != null
-                        ? `From ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: featured[0].currency ?? site.defaultCurrency }).format(featured[0].cheapestPriceMinor / 100)}`
-                        : 'See details'}
-                  </span>
-                  <span class="text-[0.75rem] font-medium text-[var(--color-brand-accent)] transition-transform duration-300 group-hover:translate-x-1">
-                    Register →
-                  </span>
-                </div>
-              </a>
-            </div>
-          )
-        }
+              <div class="mt-5 flex items-center justify-between border-t border-[var(--color-line)] pt-4">
+                <span class="text-sm font-semibold">
+                  {featured[0]?.cheapestPriceMinor === 0
+                    ? 'Free'
+                    : featured[0]?.cheapestPriceMinor != null
+                      ? `From ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: featured[0].currency ?? site.defaultCurrency }).format(featured[0].cheapestPriceMinor / 100)}`
+                      : 'See details'}
+                </span>
+                <span class="text-[0.75rem] font-medium text-[var(--color-brand-accent)] transition-transform duration-300 group-hover:translate-x-1">
+                  Register →
+                </span>
+              </div>
+            </a>
+          </div>
+        )}
       </div>
     </div>
   </section>
@@ -164,42 +188,43 @@ const totalTickets = featured.reduce((sum, row) => sum + (row.remainingTickets ?
         <h2 class="display display-lg mt-3 text-[var(--color-ink)]">Upcoming events</h2>
       </div>
 
-      {
-        total > 0 && (
-          <a
-            href="/events"
-            class="group inline-flex items-center gap-2 text-sm font-medium text-[var(--color-ink-muted)] transition-colors hover:text-[var(--color-ink)]"
+      {total > 0 && (
+        <a
+          href="/events"
+          class="group inline-flex items-center gap-2 text-sm font-medium text-[var(--color-ink-muted)] transition-colors hover:text-[var(--color-ink)]"
+        >
+          View all {total}
+          <span
+            class="transition-transform duration-300 group-hover:translate-x-1"
+            aria-hidden="true"
           >
-            View all {total}
-            <span class="transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true">→</span>
-          </a>
-        )
-      }
+            →
+          </span>
+        </a>
+      )}
     </div>
 
-    {
-      featured.length === 0 ? (
-        <div class="card p-10 text-center" data-reveal="up">
-          <p class="display display-md">Nothing on sale yet</p>
-          <p class="mt-2 text-sm text-[var(--color-ink-muted)]">
-            Published events appear here automatically.
-          </p>
-        </div>
-      ) : (
-        <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" data-stagger="0.09">
-          {featured.map((row) => (
-            <EventCard
-              event={row.event}
-              venueName={row.venueName}
-              city={row.city}
-              remainingTickets={row.remainingTickets}
-              cheapestPriceMinor={row.cheapestPriceMinor}
-              currency={row.currency}
-            />
-          ))}
-        </div>
-      )
-    }
+    {featured.length === 0 ? (
+      <div class="card p-10 text-center" data-reveal="up">
+        <p class="display display-md">Nothing on sale yet</p>
+        <p class="mt-2 text-sm text-[var(--color-ink-muted)]">
+          Published events appear here automatically.
+        </p>
+      </div>
+    ) : (
+      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" data-stagger="0.09">
+        {featured.map((row) => (
+          <EventCard
+            event={row.event}
+            venueName={row.venueName}
+            city={row.city}
+            remainingTickets={row.remainingTickets}
+            cheapestPriceMinor={row.cheapestPriceMinor}
+            currency={row.currency}
+          />
+        ))}
+      </div>
+    )}
   </section>
 
   <!-- ── Why it holds up ──────────────────────────────────────────────────── -->
@@ -211,8 +236,8 @@ const totalTickets = featured.reduce((sum, row) => sum + (row.remainingTickets ?
         <p class="display display-md text-[var(--color-brand-accent)]">01</p>
         <h3 class="mt-3 text-base font-semibold">Capacity, counted once</h3>
         <p class="mt-2 text-sm leading-relaxed text-[var(--color-ink-muted)]">
-          Inventory is enforced by the database, so the last seat is sold exactly once — even when
-          a dozen people reach checkout at the same moment.
+          Inventory is enforced by the database, so the last seat is sold exactly once — even when a
+          dozen people reach checkout at the same moment.
         </p>
       </div>
 
@@ -238,7 +263,10 @@ const totalTickets = featured.reduce((sum, row) => sum + (row.remainingTickets ?
 
   <!-- ── Closing CTA ──────────────────────────────────────────────────────── -->
   <section class="container-page mt-20">
-    <div class="relative overflow-hidden rounded-[1.5rem] border border-[var(--color-line)]" data-reveal="scale">
+    <div
+      class="relative overflow-hidden rounded-[1.5rem] border border-[var(--color-line)]"
+      data-reveal="scale"
+    >
       <div class="absolute inset-0 -z-10" aria-hidden="true">
         <EventArtwork slug="organizer-cta" category={null} variant="banner" class="h-full w-full" />
         <div class="absolute inset-0 bg-[#05070d]/70"></div>
@@ -247,15 +275,21 @@ const totalTickets = featured.reduce((sum, row) => sum + (row.remainingTickets ?
       <div class="relative px-6 py-14 sm:px-12 sm:py-20">
         <p class="eyebrow">For organizers</p>
         <h2 class="display display-xl mt-4 max-w-2xl text-white">
-          Run the room.<br />Not the spreadsheets.
+          Run the room.
+          <br />
+          Not the spreadsheets.
         </h2>
         <p class="measure mt-5 text-sm leading-relaxed text-white/70 sm:text-base">
           Publish an event, configure ticket categories, watch inventory move in real time, issue
           refunds and scan people in — from one dashboard.
         </p>
         <div class="mt-8 flex flex-wrap gap-3">
-          <a href="/dashboard" class="btn btn-primary btn-lg">Open the dashboard</a>
-          <a href="/policies/contact" class="btn btn-secondary btn-lg">Talk to us</a>
+          <a href="/dashboard" class="btn btn-primary btn-lg">
+            Open the dashboard
+          </a>
+          <a href="/policies/contact" class="btn btn-secondary btn-lg">
+            Talk to us
+          </a>
         </div>
       </div>
     </div>
