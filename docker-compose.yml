@@ -20,7 +20,11 @@ services:
       - db-data:/var/lib/postgresql/data
       - ./deployment/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_OWNER_USER:-event_owner} -d ${POSTGRES_DB:-event_platform}']
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_OWNER_USER:-event_owner} -d ${POSTGRES_DB:-event_platform}',
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -29,7 +33,9 @@ services:
       - '5432'
 
   migrate:
-    build: .
+    build:
+      context: .
+      target: migrator
     command: ['npx', 'drizzle-kit', 'migrate']
     env_file: .env
     depends_on:
