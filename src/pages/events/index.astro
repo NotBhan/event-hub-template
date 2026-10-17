@@ -1,0 +1,207 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import EventCard from '@/components/events/EventCard.astro';
+import { listPublicCategories, listPublicEvents } from '@/features/events/service';
+import { EVENT_FORMAT_LABELS } from '@/lib/format';
+
+/**
+ * Public event discovery.
+ *
+ * Filters are plain query parameters so results are linkable and work without
+ * JavaScript. The reveal animation runs once per page load — filtering performs a
+ * navigation, so the grid does not replay its entrance on every change.
+ */
+const search = Astro.url.searchParams.get('q')?.trim() ?? '';
+const category = Astro.url.searchParams.get('category')?.trim() ?? '';
+const formatParam = Astro.url.searchParams.get('format')?.trim() ?? '';
+const page = Math.max(Number(Astro.url.searchParams.get('page') ?? '1') || 1, 1);
+
+const format =
+  formatParam === 'in_person' || formatParam === 'online' || formatParam === 'hybrid'
+    ? formatParam
+    : undefined;
+
+const perPage = 12;
+
+const [{ rows, total }, categories] = await Promise.all([
+  listPublicEvents({
+    search: search || undefined,
+    category: category || undefined,
+    format,
+    upcomingOnly: true,
+    limit: perPage,
+    offset: (page - 1) * perPage,
+  }),
+  listPublicCategories(),
+]);
+
+const totalPages = Math.max(Math.ceil(total / perPage), 1);
+
+function buildUrl(overrides: Record<string, string | undefined>): string {
+  const params = new URLSearchParams(Astro.url.searchParams);
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value) params.set(key, value);
+    else params.delete(key);
+  }
+  const query = params.toString();
+  return query ? `/events?${query}` : '/events';
+}
+
+const hasFilters = Boolean(search || category || format);
+
+const activeFilters = [
+  category ? { label: category, clear: buildUrl({ category: undefined, page: undefined }) } : null,
+  format ? { label: EVENT_FORMAT_LABELS[format] ?? format, clear: buildUrl({ format: undefined, page: undefined }) } : null,
+  search ? { label: `“${search}”`, clear: buildUrl({ q: undefined, page: undefined }) } : null,
+].filter((item): item is { label: string; clear: string } => item !== null);
+---
+
+<PublicLayout title="Events">
+  <section class="container-page pt-14 sm:pt-20">
+    <div data-hero>
+      <p class="eyebrow" data-hero-item="fade">What's on</p>
+      <h1 class="display display-hero mt-5 text-[var(--color-ink)]" data-hero-item="up">
+        Events
+      </h1>
+      <p
+        class="measure mt-5 text-base leading-relaxed text-[var(--color-ink-muted)]"
+        data-hero-item="up"
+      >
+        {total}
+        {total === 1 ? 'event is open' : 'events are open'} for registration. Physical, online and
+        hybrid — every listing here is live and accepting bookings.
+      </p>
+    </div>
+  </section>
+
+  <section class="container-page mt-10" data-reveal="up">
+    <form method="GET" action="/events" class="card p-4 sm:p-5">
+      <div class="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto] lg:items-end">
+        <div>
+          <label class="label" for="q">Search</label>
+          <input
+            id="q"
+            name="q"
+            type="search"
+            class="input"
+            placeholder="Event name or description"
+            value={search}
+          />
+        </div>
+
+        <div class="lg:w-44">
+          <label class="label" for="category">Category</label>
+          <select id="category" name="category" class="input">
+            <option value="">All categories</option>
+            {
+              categories.map((item) => (
+                <option value={item} selected={item === category}>
+                  {item}
+                </option>
+              ))
+            }
+          </select>
+        </div>
+
+        <div class="lg:w-40">
+          <label class="label" for="format">Format</label>
+          <select id="format" name="format" class="input">
+            <option value="">Any format</option>
+            {
+              Object.entries(EVENT_FORMAT_LABELS).map(([value, label]) => (
+                <option value={value} selected={value === format}>
+                  {label}
+                </option>
+              ))
+            }
+          </select>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="submit" class="btn btn-primary w-full lg:w-auto">Apply filters</button>
+          {hasFilters && <a href="/events" class="btn btn-ghost">Clear</a>}
+        </div>
+      </div>
+
+      {
+        activeFilters.length > 0 && (
+          <ul class="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--color-line)] pt-4">
+            <li class="eyebrow-plain mr-1">Active</li>
+            {activeFilters.map((filter) => (
+              <li>
+                <a
+                  href={filter.clear}
+                  class="badge badge-outline gap-1.5 transition-colors hover:border-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+                >
+                  {filter.label}
+                  <span aria-hidden="true">×</span>
+                  <span class="sr-only">Remove filter</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </form>
+  </section>
+
+  <section class="container-page mt-10 pb-20">
+    {
+      rows.length === 0 ? (
+        <div class="card px-6 py-16 text-center" data-reveal="up">
+          <p class="display display-md text-[var(--color-ink)]">Nothing matches</p>
+          <p class="mt-3 text-sm text-[var(--color-ink-muted)]">
+            Try a different search term, or clear the filters to see everything that is on sale.
+          </p>
+          {hasFilters && (
+            <a href="/events" class="btn btn-secondary btn-sm mt-6">
+              Clear filters
+            </a>
+          )}
+        </div>
+      ) : (
+        <>
+          <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" data-stagger="0.08">
+            {rows.map((row) => (
+              <EventCard
+                event={row.event}
+                venueName={row.venueName}
+                city={row.city}
+                remainingTickets={row.remainingTickets}
+                cheapestPriceMinor={row.cheapestPriceMinor}
+                currency={row.currency}
+              />
+            ))}
+          </div>
+
+          {
+            totalPages > 1 && (
+              <nav class="mt-14 flex items-center justify-center gap-3" aria-label="Pagination">
+                <a
+                  href={buildUrl({ page: page > 1 ? String(page - 1) : undefined })}
+                  class:list={['btn btn-secondary btn-sm', page <= 1 && 'pointer-events-none opacity-40']}
+                  aria-disabled={page <= 1}
+                >
+                  Previous
+                </a>
+                <span class="px-2 text-sm text-[var(--color-ink-muted)]">
+                  Page {page} of {totalPages}
+                </span>
+                <a
+                  href={buildUrl({ page: page < totalPages ? String(page + 1) : undefined })}
+                  class:list={[
+                    'btn btn-secondary btn-sm',
+                    page >= totalPages && 'pointer-events-none opacity-40',
+                  ]}
+                  aria-disabled={page >= totalPages}
+                >
+                  Next
+                </a>
+              </nav>
+            )
+          }
+        </>
+      )
+    }
+  </section>
+</PublicLayout>

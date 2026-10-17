@@ -1,0 +1,120 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import { features } from '@/config/features';
+
+/**
+ * Create an account.
+ *
+ * Attendee accounts exist so a buyer can keep their registrations together.
+ * Guests can still register without one when `features.guestCheckout` is on.
+ */
+if (!features.attendeeAccounts) {
+  return Astro.redirect('/login', 302);
+}
+
+if (Astro.locals.user) {
+  return Astro.redirect('/account/tickets', 302);
+}
+---
+
+<PublicLayout title="Create an account" noIndex>
+  <div class="mx-auto max-w-md px-4 py-14 sm:px-6">
+    <h1 class="display display-lg text-[var(--color-ink)]">Create an account</h1>
+    <p class="mt-2 text-sm text-[var(--color-ink-muted)]">
+      Keep your registrations and tickets in one place. You can also register for an event without
+      an account.
+    </p>
+
+    <form class="mt-8 space-y-4" data-signup-form>
+      <div>
+        <label class="label" for="name">Full name</label>
+        <input id="name" name="name" class="input" required autocomplete="name" minlength="2" />
+      </div>
+
+      <div>
+        <label class="label" for="email">Email</label>
+        <input id="email" name="email" type="email" class="input" required autocomplete="email" />
+      </div>
+
+      <div>
+        <label class="label" for="password">Password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          class="input"
+          required
+          autocomplete="new-password"
+          minlength="10"
+        />
+        <p class="help-text">At least 10 characters. Longer is better than complicated.</p>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full" data-submit>Create account</button>
+    </form>
+
+    <div
+      class="mt-4 hidden rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+      data-error
+      role="alert"
+    >
+    </div>
+
+    <p class="mt-6 text-sm text-[var(--color-ink-muted)]">
+      Already have an account? <a href="/login" class="font-medium text-[var(--color-brand)] hover:underline">Sign in</a>
+    </p>
+  </div>
+</PublicLayout>
+
+<script>
+  import { authClient } from '@/lib/auth/client';
+
+  const form = document.querySelector<HTMLFormElement>('[data-signup-form]');
+  const errorBox = document.querySelector<HTMLElement>('[data-error]');
+  const submit = document.querySelector<HTMLButtonElement>('[data-submit]');
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const data = new FormData(form);
+    const name = String(data.get('name') ?? '');
+    const email = String(data.get('email') ?? '');
+    const password = String(data.get('password') ?? '');
+
+    if (errorBox) errorBox.classList.add('hidden');
+
+    if (password.length < 10) {
+      if (errorBox) {
+        errorBox.textContent = 'Choose a password of at least 10 characters.';
+        errorBox.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (submit) {
+      submit.disabled = true;
+      submit.textContent = 'Creating your account…';
+    }
+
+    const { error } = await authClient.signUp.email({ name, email, password });
+
+    if (error) {
+      const message =
+        error.status === 422 || error.code === 'USER_ALREADY_EXISTS'
+          ? 'An account with that email already exists. Try signing in instead.'
+          : 'We could not create your account. Please try again.';
+
+      if (errorBox) {
+        errorBox.textContent = message;
+        errorBox.classList.remove('hidden');
+      }
+      if (submit) {
+        submit.disabled = false;
+        submit.textContent = 'Create account';
+      }
+      return;
+    }
+
+    window.location.assign('/account/tickets');
+  });
+</script>

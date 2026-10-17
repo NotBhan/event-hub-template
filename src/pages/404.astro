@@ -1,0 +1,41 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+
+/**
+ * Not found.
+ *
+ * Also the landing point for draft, private and cancelled events, which are
+ * deliberately indistinguishable from a URL that never existed.
+ */
+---
+
+<PublicLayout title="Page not found" noIndex>
+  <section class="container-page relative isolate overflow-hidden py-24 sm:py-32">
+    <div
+      class="pointer-events-none absolute left-1/2 top-0 -z-10 h-[26rem] w-[26rem] -translate-x-1/2 rounded-full opacity-20 blur-[100px]"
+      style="background: radial-gradient(circle, var(--color-brand) 0%, transparent 70%)"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div class="mx-auto max-w-xl text-center" data-hero>
+      <p class="display text-[6rem] leading-none text-gradient sm:text-[9rem]" data-hero-item="up">
+        404
+      </p>
+
+      <h1 class="display display-lg mt-4 text-[var(--color-ink)]" data-hero-item="up">
+        We could not find that page
+      </h1>
+
+      <p class="mt-4 text-sm leading-relaxed text-[var(--color-ink-muted)]" data-hero-item="up">
+        The link may be out of date, or the event may no longer be public. If a ticket link brought
+        you here, check the most recent confirmation email.
+      </p>
+
+      <div class="mt-9 flex flex-wrap justify-center gap-3" data-hero-item="up">
+        <a href="/events" class="btn btn-primary">Browse events</a>
+        <a href="/" class="btn btn-secondary">Go home</a>
+      </div>
+    </div>
+  </section>
+</PublicLayout>

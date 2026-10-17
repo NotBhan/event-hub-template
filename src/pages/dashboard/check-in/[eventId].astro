@@ -1,0 +1,406 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import { organizerGuard } from '@/lib/permissions/page-guards';
+import { can } from '@/lib/permissions/guards';
+import { getEventForOrganization } from '@/features/events/service';
+import { getCheckInStats } from '@/features/check-in/service';
+import { formatCompactWindow } from '@/lib/format';
+import { features } from '@/config/features';
+
+/**
+ * Admission scanner.
+ *
+ * Runs in the browser and uses the device camera; there is no native app. The
+ * decode happens client-side but the *decision* does not: every scan is submitted
+ * to the server, which is the only place that can record an admission and where
+ * the database enforces that a ticket is admitted exactly once.
+ */
+const guard = organizerGuard(Astro);
+if (!guard.ok) return Astro.redirect(guard.redirectTo ?? '/dashboard/no-access', 302);
+
+if (!features.qrCheckIn || !can(Astro, { check_in: ['perform'] })) {
+  return Astro.redirect('/dashboard', 302);
+}
+
+const { membership } = guard;
+const eventId = Astro.params.eventId;
+
+if (!eventId) return Astro.redirect('/dashboard/check-in', 302);
+
+let event;
+try {
+  event = await getEventForOrganization(eventId, membership.organizationId);
+} catch {
+  return Astro.redirect('/dashboard/check-in', 302);
+}
+
+const stats = await getCheckInStats(event.id);
+---
+
+<DashboardLayout title={`Scanner · ${event.title}`} description="Admission scanner" section="check-in">
+  <div class="mx-auto max-w-2xl">
+    <nav class="mb-5 text-sm" aria-label="Breadcrumb">
+      <a href="/dashboard/check-in" class="text-[var(--color-ink-muted)] hover:underline">
+        Check-in
+      </a>
+      <span class="text-[var(--color-ink-muted)]"> / </span>
+      <span class="text-[var(--color-ink-muted)]">{event.title}</span>
+    </nav>
+
+    <div class="mb-5">
+      <h1 class="text-xl font-bold tracking-tight">{event.title}</h1>
+      <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+        {formatCompactWindow(event.startsAt, event.timezone)}
+      </p>
+    </div>
+
+    <section class="mb-5 grid grid-cols-3 gap-3">
+      <div class="card p-3 text-center">
+        <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
+          Admitted
+        </p>
+        <p class="mt-1 text-2xl font-semibold" data-stat-admitted>{stats.admitted}</p>
+      </div>
+      <div class="card p-3 text-center">
+        <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
+          Issued
+        </p>
+        <p class="mt-1 text-2xl font-semibold">{stats.issued}</p>
+      </div>
+      <div class="card p-3 text-center">
+        <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
+          Repeat scans
+        </p>
+        <p class="mt-1 text-2xl font-semibold" data-stat-duplicates>{stats.duplicates}</p>
+      </div>
+    </section>
+
+    <section
+      class="rounded-[var(--radius-card)] border-2 p-5 text-center transition-colors"
+      data-result
+      role="status"
+      aria-live="assertive"
+      style="border-color: var(--color-line);"
+    >
+      <p class="text-lg font-semibold" data-result-title>Ready to scan</p>
+      <p class="mt-1 text-sm text-[var(--color-ink-muted)]" data-result-detail>
+        Point the camera at the attendee's QR code.
+      </p>
+      <div class="mt-3 hidden" data-result-attendee>
+        <p class="text-base font-medium" data-attendee-name></p>
+        <p class="text-sm text-[var(--color-ink-muted)]" data-attendee-ticket></p>
+      </div>
+    </section>
+
+    <section class="card mt-5 overflow-hidden">
+      <div class="relative bg-black">
+        <video
+          class="h-64 w-full object-cover sm:h-80"
+          data-video
+          muted
+          playsinline
+          aria-label="Camera preview"
+        ></video>
+        <div class="absolute inset-0 grid place-items-center" data-camera-overlay>
+          <p class="rounded-lg bg-black/70 px-3 py-2 text-sm text-white" data-camera-message>
+            Starting the camera…
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2 p-4">
+        <button type="button" class="btn btn-primary btn-sm" data-start>Start camera</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-stop disabled>Stop camera</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-sound-toggle aria-pressed="true">
+          Sound on
+        </button>
+      </div>
+    </section>
+
+    <details class="card mt-5 p-5">
+      <summary class="cursor-pointer text-sm font-medium">Enter a code manually</summary>
+      <form class="mt-4 flex flex-wrap items-end gap-2" data-manual-form>
+        <div class="min-w-56 flex-1">
+          <label class="label" for="manual-token">Ticket code</label>
+          <input
+            id="manual-token"
+            name="token"
+            class="input"
+            placeholder="Paste the code from the ticket"
+            autocomplete="off"
+          />
+        </div>
+        <button type="submit" class="btn btn-secondary btn-sm">Check ticket</button>
+      </form>
+      <p class="help-text">
+        Useful when a screen is cracked or the camera is unavailable. The code is printed with the
+        QR image.
+      </p>
+    </details>
+
+    <p class="mt-4 text-xs text-[var(--color-ink-muted)]">
+      Each ticket admits one person exactly once. If two devices scan the same ticket at the same
+      moment, only one admission is recorded — the other is reported as already checked in.
+    </p>
+  </div>
+</DashboardLayout>
+
+<script>
+  /**
+   * Scanner client.
+   *
+   * The browser is responsible for decoding and for presenting the result clearly.
+   * It is not responsible for deciding anything: the server records the admission
+   * and reports the outcome, including which of two simultaneous scans won.
+   */
+
+  interface ScanResponse {
+    outcome: string;
+    accepted: boolean;
+    message: string;
+    attendee: {
+      name: string;
+      ticketTypeName: string;
+      ticketReference: string;
+      eventTitle: string;
+    } | null;
+    error?: string;
+  }
+
+  const eventId = new URL(window.location.href).pathname.split('/').pop() ?? '';
+
+  const video = document.querySelector<HTMLVideoElement>('[data-video]');
+  const overlay = document.querySelector<HTMLElement>('[data-camera-overlay]');
+  const cameraMessage = document.querySelector<HTMLElement>('[data-camera-message]');
+  const startButton = document.querySelector<HTMLButtonElement>('[data-start]');
+  const stopButton = document.querySelector<HTMLButtonElement>('[data-stop]');
+  const soundToggle = document.querySelector<HTMLButtonElement>('[data-sound-toggle]');
+  const manualForm = document.querySelector<HTMLFormElement>('[data-manual-form]');
+
+  const resultBox = document.querySelector<HTMLElement>('[data-result]');
+  const resultTitle = document.querySelector<HTMLElement>('[data-result-title]');
+  const resultDetail = document.querySelector<HTMLElement>('[data-result-detail]');
+  const attendeeBox = document.querySelector<HTMLElement>('[data-result-attendee]');
+  const attendeeName = document.querySelector<HTMLElement>('[data-attendee-name]');
+  const attendeeTicket = document.querySelector<HTMLElement>('[data-attendee-ticket]');
+  const statAdmitted = document.querySelector<HTMLElement>('[data-stat-admitted]');
+  const statDuplicates = document.querySelector<HTMLElement>('[data-stat-duplicates]');
+
+  /** Outcome → presentation. Kept in one table so the door staff see consistency. */
+  const PRESENTATION: Record<string, { title: string; tone: string; colour: string }> = {
+    accepted: { title: 'Admitted', tone: 'success', colour: '#16a34a' },
+    already_checked_in: { title: 'Already checked in', tone: 'warning', colour: '#d97706' },
+    wrong_event: { title: 'Wrong event', tone: 'danger', colour: '#dc2626' },
+    invalid_token: { title: 'Not a valid ticket', tone: 'danger', colour: '#dc2626' },
+    void_ticket: { title: 'Void ticket', tone: 'danger', colour: '#dc2626' },
+    unauthorized: { title: 'Not authorized', tone: 'danger', colour: '#dc2626' },
+  };
+
+  let soundEnabled = true;
+  let controls: { stop: () => void } | null = null;
+  let busy = false;
+  let lastToken = '';
+  let lastTokenAt = 0;
+
+  /** Repeated frames of the same code must not become repeated scans. */
+  const REPEAT_WINDOW_MS = 4000;
+
+  const beep = (frequency: number, durationMs: number) => {
+    if (!soundEnabled) return;
+
+    try {
+      const AudioContextClass =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+      if (!AudioContextClass) return;
+
+      const context = new AudioContextClass();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+
+      oscillator.frequency.value = frequency;
+      oscillator.type = 'sine';
+      gain.gain.value = 0.08;
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + durationMs / 1000);
+
+      setTimeout(() => void context.close(), durationMs + 100);
+    } catch {
+      // Audio is a nicety; never let it break scanning.
+    }
+  };
+
+  const vibrate = (pattern: number | number[]) => {
+    try {
+      navigator.vibrate?.(pattern);
+    } catch {
+      // Unsupported on this device.
+    }
+  };
+
+  const showResult = (response: ScanResponse) => {
+    const presentation = PRESENTATION[response.outcome] ?? {
+      title: response.message || 'Unrecognised result',
+      tone: 'danger',
+      colour: '#dc2626',
+    };
+
+    if (resultBox) resultBox.style.borderColor = presentation.colour;
+    if (resultTitle) {
+      resultTitle.textContent = presentation.title;
+      resultTitle.style.color = presentation.colour;
+    }
+    if (resultDetail) resultDetail.textContent = response.message;
+
+    if (response.attendee && attendeeBox && attendeeName && attendeeTicket) {
+      attendeeName.textContent = response.attendee.name;
+      attendeeTicket.textContent = `${response.attendee.ticketTypeName} · ${response.attendee.ticketReference}`;
+      attendeeBox.classList.remove('hidden');
+    } else if (attendeeBox) {
+      attendeeBox.classList.add('hidden');
+    }
+
+    if (response.accepted) {
+      beep(880, 160);
+      vibrate(120);
+    } else {
+      beep(220, 380);
+      vibrate([90, 70, 90]);
+    }
+  };
+
+  const showError = (message: string) => {
+    if (resultBox) resultBox.style.borderColor = '#dc2626';
+    if (resultTitle) {
+      resultTitle.textContent = 'Could not check that ticket';
+      resultTitle.style.color = '#dc2626';
+    }
+    if (resultDetail) resultDetail.textContent = message;
+    if (attendeeBox) attendeeBox.classList.add('hidden');
+    beep(220, 380);
+  };
+
+  const submitToken = async (token: string) => {
+    if (busy || !token.trim()) return;
+
+    const now = Date.now();
+    if (token === lastToken && now - lastTokenAt < REPEAT_WINDOW_MS) return;
+
+    lastToken = token;
+    lastTokenAt = now;
+    busy = true;
+
+    try {
+      const response = await fetch('/api/check-in/scan', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ eventId, token }),
+      });
+
+      const result = (await response.json()) as ScanResponse;
+
+      if (!response.ok) {
+        showError(result.error ?? 'The scan was rejected.');
+        return;
+      }
+
+      showResult(result);
+
+      // Counters are adjusted from the server's answer rather than guessed.
+      if (result.outcome === 'accepted' && statAdmitted) {
+        statAdmitted.textContent = String(Number(statAdmitted.textContent ?? '0') + 1);
+      }
+      if (result.outcome === 'already_checked_in' && statDuplicates) {
+        statDuplicates.textContent = String(Number(statDuplicates.textContent ?? '0') + 1);
+      }
+    } catch {
+      showError('No connection to the server. Check the network and try again.');
+    } finally {
+      // A short pause stops one QR code filling the screen from being read twice.
+      setTimeout(() => {
+        busy = false;
+      }, 600);
+    }
+  };
+
+  const startCamera = async () => {
+    if (controls || !video) return;
+
+    if (cameraMessage) cameraMessage.textContent = 'Starting the camera…';
+    if (overlay) overlay.classList.remove('hidden');
+
+    try {
+      const { BrowserMultiFormatReader } = await import('@zxing/browser');
+      const reader = new BrowserMultiFormatReader();
+
+      controls = await reader.decodeFromVideoDevice(undefined, video, (result) => {
+        if (result) void submitToken(result.getText());
+      });
+
+      if (overlay) overlay.classList.add('hidden');
+      if (startButton) startButton.disabled = true;
+      if (stopButton) stopButton.disabled = false;
+    } catch (error) {
+      const name = (error as { name?: string }).name;
+
+      if (cameraMessage) {
+        cameraMessage.textContent =
+          name === 'NotAllowedError'
+            ? 'Camera access was refused. Allow it in your browser settings, or enter codes manually.'
+            : name === 'NotFoundError'
+              ? 'No camera was found on this device. Use manual entry instead.'
+              : 'The camera could not be started. Use manual entry instead.';
+      }
+
+      controls = null;
+      if (startButton) startButton.disabled = false;
+      if (stopButton) stopButton.disabled = true;
+    }
+  };
+
+  const stopCamera = () => {
+    controls?.stop();
+    controls = null;
+
+    if (video) {
+      const stream = video.srcObject as MediaStream | null;
+      stream?.getTracks().forEach((track) => track.stop());
+      video.srcObject = null;
+    }
+
+    if (overlay) overlay.classList.remove('hidden');
+    if (cameraMessage) cameraMessage.textContent = 'Camera stopped.';
+    if (startButton) startButton.disabled = false;
+    if (stopButton) stopButton.disabled = true;
+  };
+
+  startButton?.addEventListener('click', () => void startCamera());
+  stopButton?.addEventListener('click', stopCamera);
+
+  soundToggle?.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    soundToggle.textContent = soundEnabled ? 'Sound on' : 'Sound off';
+    soundToggle.setAttribute('aria-pressed', String(soundEnabled));
+  });
+
+  manualForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    const input = manualForm.querySelector<HTMLInputElement>('input[name="token"]');
+    if (!input?.value.trim()) return;
+
+    void submitToken(input.value.trim());
+    input.value = '';
+  });
+
+  // Stop the camera when the page is hidden or unloaded, so the indicator light
+  // does not stay on after staff leave the scanner.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopCamera();
+  });
+
+  window.addEventListener('pagehide', stopCamera);
+</script>

@@ -1,0 +1,29 @@
+---
+/**
+ * Status badge. Tones are derived from the shared STATUS_TONES map so a given
+ * state always reads the same way across the public site and the dashboard.
+ */
+import { STATUS_TONES } from '@/lib/format';
+
+interface Props {
+  label: string;
+  /** A status key used to resolve a tone, or an explicit tone. */
+  status?: string;
+  tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'info';
+  class?: string;
+}
+
+const { label, status, tone, class: className = '' } = Astro.props;
+
+const resolved = tone ?? (status ? (STATUS_TONES[status] ?? 'neutral') : 'neutral');
+
+const toneClasses: Record<string, string> = {
+  neutral: 'bg-slate-100 text-slate-700',
+  success: 'bg-emerald-100 text-emerald-800',
+  warning: 'bg-amber-100 text-amber-800',
+  danger: 'bg-red-100 text-red-800',
+  info: 'bg-sky-100 text-sky-800',
+};
+---
+
+<span class={`badge ${toneClasses[resolved]} ${className}`}>{label}</span>

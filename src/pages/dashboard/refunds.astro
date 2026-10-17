@@ -1,0 +1,146 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import StatusBadge from '@/components/ui/StatusBadge.astro';
+import { organizerGuard } from '@/lib/permissions/page-guards';
+import { listRefunds } from '@/features/refunds/service';
+import { REFUND_STATUS_LABELS, formatRelative } from '@/lib/format';
+import { formatMoney } from '@/lib/money';
+import { features } from '@/config/features';
+
+/**
+ * Refund queue.
+ *
+ * Pending refunds are shown distinctly from successful ones: a refund is not
+ * finished when it is submitted, only when the provider confirms it.
+ */
+const guard = organizerGuard(Astro);
+if (!guard.ok) return Astro.redirect(guard.redirectTo ?? '/dashboard/no-access', 302);
+
+if (!features.refunds) return Astro.redirect('/dashboard', 302);
+
+const { membership } = guard;
+
+const statusParam = Astro.url.searchParams.get('status')?.trim() ?? '';
+const status =
+  statusParam === 'requested' || statusParam === 'pending' || statusParam === 'succeeded' || statusParam === 'failed'
+    ? statusParam
+    : undefined;
+
+const refunds = await listRefunds({ organizationId: membership.organizationId, status, limit: 100 });
+
+const totalsByStatus = refunds.reduce<Record<string, number>>((acc, row) => {
+  acc[row.refund.status] = (acc[row.refund.status] ?? 0) + row.refund.amountMinor;
+  return acc;
+}, {});
+
+const countsByStatus = refunds.reduce<Record<string, number>>((acc, row) => {
+  acc[row.refund.status] = (acc[row.refund.status] ?? 0) + 1;
+  return acc;
+}, {});
+---
+
+<DashboardLayout title="Refunds" description="Refund queue" section="refunds">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold tracking-tight">Refunds</h1>
+    <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+      Every refund against this organization, newest first.
+    </p>
+  </div>
+
+  <section class="mb-6 grid gap-4 sm:grid-cols-3">
+    {
+      (['pending', 'succeeded', 'failed'] as const).map((state) => (
+        <div class="card p-4">
+          <p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
+            {REFUND_STATUS_LABELS[state]}
+          </p>
+          <p class="mt-1.5 text-2xl font-semibold">{countsByStatus[state] ?? 0}</p>
+          <p class="mt-1 text-xs text-[var(--color-ink-muted)]">
+            {formatMoney(totalsByStatus[state] ?? 0, refunds[0]?.refund.currency ?? 'INR')}
+          </p>
+        </div>
+      ))
+    }
+  </section>
+
+  <nav class="mb-4 flex flex-wrap gap-2" aria-label="Filter refunds">
+    <a
+      href="?"
+      class:list={['btn btn-sm', !status ? 'btn-primary' : 'btn-secondary']}
+    >
+      All
+    </a>
+    {
+      Object.entries(REFUND_STATUS_LABELS).map(([value, label]) => (
+        <a
+          href={`?status=${value}`}
+          class:list={['btn btn-sm', status === value ? 'btn-primary' : 'btn-secondary']}
+        >
+          {label}
+        </a>
+      ))
+    }
+  </nav>
+
+  {
+    refunds.length === 0 ? (
+      <p class="card p-8 text-center text-sm text-[var(--color-ink-muted)]">
+        No refunds {status ? `with status “${REFUND_STATUS_LABELS[status]}”` : 'yet'}.
+      </p>
+    ) : (
+      <div class="card overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Requested</th>
+              <th scope="col">Event</th>
+              <th scope="col">Buyer</th>
+              <th scope="col" class="text-right">Amount</th>
+              <th scope="col">Status</th>
+              <th scope="col">Provider reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            {refunds.map((row) => (
+              <tr>
+                <td class="text-[var(--color-ink-muted)]">
+                  {formatRelative(row.refund.createdAt)}
+                </td>
+                <td>
+                  <a
+                    href={`/dashboard/events/${row.eventId}/orders`}
+                    class="font-medium hover:text-[var(--color-brand)]"
+                  >
+                    {row.eventTitle}
+                  </a>
+                  <p class="font-mono text-xs text-[var(--color-ink-muted)]">
+                    {row.orderReference}
+                  </p>
+                </td>
+                <td>
+                  <p class="font-medium">{row.buyerName}</p>
+                  <p class="text-xs text-[var(--color-ink-muted)]">{row.buyerEmail}</p>
+                </td>
+                <td class="text-right">
+                  {formatMoney(row.refund.amountMinor, row.refund.currency)}
+                </td>
+                <td>
+                  <StatusBadge
+                    label={REFUND_STATUS_LABELS[row.refund.status] ?? row.refund.status}
+                    status={row.refund.status}
+                  />
+                  {row.refund.failureReason && (
+                    <p class="mt-1 text-xs text-red-700">{row.refund.failureReason}</p>
+                  )}
+                </td>
+                <td class="font-mono text-xs text-[var(--color-ink-muted)]">
+                  {row.refund.providerRefundId ?? '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+</DashboardLayout>

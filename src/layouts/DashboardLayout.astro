@@ -1,0 +1,120 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import { can } from '@/lib/permissions/guards';
+import { roleLabels, type OrganizationRole } from '@/lib/permissions';
+import { getOrganizationSettings } from '@/features/events/service';
+import { site } from '@/config/site';
+import { features } from '@/config/features';
+
+interface Props {
+  title: string;
+  description?: string;
+  /** Highlights the active navigation entry. */
+  section?: string;
+}
+
+const { title, description, section } = Astro.props;
+
+/**
+ * Organizer dashboard chrome.
+ *
+ * This is the operational surface, so it deliberately inverts the public site:
+ * light, dense and quiet. Motion here is limited to a short entrance on metric
+ * cards — nothing that delays reading a table, opening a refund form or using the
+ * scanner.
+ *
+ * Navigation is filtered by permission so staff never see a link that would only
+ * reject them, but the filter is presentation only. Every page and endpoint
+ * re-checks authorization on the server.
+ */
+const user = Astro.locals.user;
+const membership = Astro.locals.membership;
+
+const branding = membership ? await getOrganizationSettings(membership.organizationId) : null;
+const brandName = branding?.brandName || site.name;
+
+const links = [
+  { href: '/dashboard', label: 'Overview', key: 'overview', visible: true },
+  { href: '/dashboard/events', label: 'Events', key: 'events', visible: can(Astro, { event: ['read'] }) },
+  { href: '/dashboard/refunds', label: 'Refunds', key: 'refunds', visible: can(Astro, { refund: ['read'] }) },
+  {
+    href: '/dashboard/check-in',
+    label: 'Check-in',
+    key: 'check-in',
+    visible: can(Astro, { check_in: ['perform'] }),
+  },
+  { href: '/dashboard/staff', label: 'Staff', key: 'staff', visible: can(Astro, { member: ['read'] }) },
+  {
+    href: '/dashboard/settings',
+    label: 'Settings',
+    key: 'settings',
+    visible: can(Astro, { settings: ['read'] }),
+  },
+].filter((link) => link.visible && (link.key !== 'refunds' || features.refunds));
+---
+
+<BaseLayout title={title} description={description} branding={branding} noIndex theme="light">
+  <div data-theme="light" class="min-h-screen bg-[var(--color-canvas)] text-[var(--color-ink)]">
+    <header
+      class="sticky top-0 z-30 border-b border-[var(--color-line)] bg-[color-mix(in_srgb,var(--color-surface)_92%,transparent)] backdrop-blur-xl"
+    >
+      <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+        <div class="flex items-center gap-3">
+          <a href="/" class="flex items-center gap-2">
+            <img
+              src={branding?.logoUrl || site.logo}
+              alt=""
+              class="h-7 w-7 rounded-md"
+              width="28"
+              height="28"
+            />
+            <span class="text-sm font-semibold tracking-tight">{brandName}</span>
+          </a>
+          <span class="text-[var(--color-ink-faint)]" aria-hidden="true">/</span>
+          <span class="text-sm font-medium text-[var(--color-ink-muted)]">Organizer</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          {
+            membership && (
+              <span class="hidden text-xs text-[var(--color-ink-muted)] lg:inline">
+                {user?.email} · {roleLabels[membership.role as OrganizationRole]}
+              </span>
+            )
+          }
+          <a href="/" class="btn btn-secondary btn-sm">View site</a>
+          <form method="POST" action="/logout">
+            <button type="submit" class="btn btn-ghost btn-sm">Sign out</button>
+          </form>
+        </div>
+      </div>
+
+      <nav class="mx-auto max-w-7xl px-4 sm:px-6" aria-label="Dashboard">
+        <ul class="flex gap-1 overflow-x-auto">
+          {
+            links.map((link) => (
+              <li>
+                <a
+                  href={link.href}
+                  class:list={[
+                    '-mb-px block whitespace-nowrap border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium transition-colors',
+                    section === link.key
+                      ? 'border-[var(--color-brand)] text-[var(--color-ink)]'
+                      : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]',
+                  ]}
+                  aria-current={section === link.key ? 'page' : undefined}
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <slot />
+    </main>
+  </div>
+</BaseLayout>

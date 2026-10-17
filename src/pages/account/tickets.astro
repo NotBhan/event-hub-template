@@ -1,0 +1,103 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import StatusBadge from '@/components/ui/StatusBadge.astro';
+import { listTicketsForUser } from '@/features/tickets/service';
+import { getOrder } from '@/features/orders/service';
+import { formatCompactWindow, TICKET_STATUS_LABELS } from '@/lib/format';
+
+/**
+ * A signed-in attendee's tickets.
+ *
+ * Only tickets belonging to the authenticated user are queried; the user id comes
+ * from the session, never from the request.
+ */
+const user = Astro.locals.user;
+
+if (!user) {
+  return Astro.redirect('/login?next=%2Faccount%2Ftickets', 302);
+}
+
+const rows = await listTicketsForUser(user.id);
+
+// Tickets are grouped by the order that produced them, so a five-ticket order
+// reads as one registration rather than five unrelated rows.
+const byOrder = new Map<string, typeof rows>();
+
+for (const row of rows) {
+  const list = byOrder.get(row.ticket.orderId) ?? [];
+  list.push(row);
+  byOrder.set(row.ticket.orderId, list);
+}
+
+const groups = await Promise.all(
+  [...byOrder.entries()].map(async ([orderId, tickets]) => ({
+    orderId,
+    tickets,
+    order: (await getOrder(orderId)) ?? null,
+  })),
+);
+---
+
+<PublicLayout title="My tickets" noIndex>
+  <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <h1 class="display display-lg text-[var(--color-ink)]">My tickets</h1>
+    <p class="mt-2 text-sm text-[var(--color-ink-muted)]">
+      Signed in as {user.email}
+    </p>
+
+    {
+      rows.length === 0 ? (
+        <div class="card mt-8 p-8 text-center">
+          <p class="font-medium">You have no tickets yet.</p>
+          <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+            Registrations made with this email address appear here.
+          </p>
+          <a href="/events" class="btn btn-primary btn-sm mt-4">Browse events</a>
+        </div>
+      ) : (
+        <ul class="mt-8 space-y-6">
+          {groups.map((group) => (
+            <li class="card p-5">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 class="text-lg font-semibold">{group.tickets[0]?.eventTitle}</h2>
+                  {group.tickets[0] && (
+                    <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+                      {formatCompactWindow(group.tickets[0].eventStartsAt, group.tickets[0].eventTimezone)}
+                    </p>
+                  )}
+                </div>
+                <a href={`/events/${group.tickets[0]?.eventSlug}`} class="btn btn-secondary btn-sm">
+                  Event page
+                </a>
+              </div>
+
+              <ul class="mt-4 divide-y divide-[var(--color-line)]">
+                {group.tickets.map((row) => (
+                  <li class="flex flex-wrap items-center justify-between gap-2 py-3">
+                    <div>
+                      <p class="font-medium">{row.attendeeName}</p>
+                      <p class="text-sm text-[var(--color-ink-muted)]">
+                        {row.ticketTypeName} · <span class="font-mono text-xs">{row.ticket.publicReference}</span>
+                      </p>
+                    </div>
+                    <StatusBadge
+                      label={TICKET_STATUS_LABELS[row.ticket.status] ?? row.ticket.status}
+                      status={row.ticket.status}
+                    />
+                  </li>
+                ))}
+              </ul>
+
+              <p class="mt-3 text-xs text-[var(--color-ink-muted)]">
+                {group.order
+                  ? `Registration ${group.order.publicReference}. Open the link from your confirmation email to display the QR codes for entry.`
+                  : 'Open the link from your confirmation email to display the QR codes for entry.'}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</PublicLayout>

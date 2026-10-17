@@ -1,0 +1,127 @@
+---
+import { site } from '@/config/site';
+import { motion } from '@/lib/motion/tokens';
+import '@/styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Branding stored in the database, which overrides the build-time defaults. */
+  branding?: {
+    brandName?: string | null;
+    primaryColor?: string | null;
+    logoUrl?: string | null;
+  } | null;
+  noIndex?: boolean;
+  /** `light` for the organizer surface; the public site is dark by default. */
+  theme?: 'dark' | 'light';
+}
+
+const {
+  title,
+  description = site.description,
+  branding = null,
+  noIndex = false,
+  theme = 'dark',
+} = Astro.props;
+
+const brandName = branding?.brandName?.trim() || site.name;
+const pageTitle = title ? `${title} · ${brandName}` : `${brandName} · ${site.tagline}`;
+
+/**
+ * Runtime branding, written as a custom property. `--color-brand` in the
+ * stylesheet resolves `var(--brand-primary)`, so this one value reaches both
+ * themes without a rebuild.
+ */
+const brandVars = branding?.primaryColor
+  ? `--brand-primary: ${branding.primaryColor};`
+  : '';
+
+const themeColor = branding?.primaryColor || site.colors.primary;
+---
+
+<!doctype html>
+<html lang="en" data-theme={theme === 'light' ? 'light' : undefined}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    {noIndex && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="icon" type="image/svg+xml" href={branding?.logoUrl || site.favicon} />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site ?? Astro.url.origin).href} />
+
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content={themeColor} />
+
+    <!--
+      Fonts are self-hosted. Preloading the two files that paint the first screen
+      avoids a flash of fallback text without depending on a third-party CDN.
+    -->
+    <link
+      rel="preload"
+      href="/fonts/inter-400-700-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/bebas-neue-400-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    {
+      brandVars && (
+        <style is:inline set:html={`:root { ${brandVars} }`} />
+      )
+    }
+
+    <!--
+      Motion bootstrap.
+
+      Runs before first paint. It only marks the document as animatable when the
+      visitor has not asked for reduced motion and the deployment has not turned
+      animation off — which is what allows the stylesheet to hide hero items
+      without ever hiding content from someone who will not see the animation.
+    -->
+    <script is:inline define:vars={{ motionIntensity: motion.intensity }}>
+      (function () {
+        try {
+          var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          if (!reduced && motionIntensity !== 'off') {
+            document.documentElement.dataset.motion = 'on';
+          }
+        } catch (error) {
+          /* Motion is optional; failure must not affect the page. */
+        }
+      })();
+    </script>
+  </head>
+  <body class="min-h-screen flex flex-col antialiased">
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 btn btn-primary"
+    >
+      Skip to content
+    </a>
+    <slot name="header" />
+    <main id="main" class="flex-1">
+      <slot />
+    </main>
+    <slot name="footer" />
+  </body>
+</html>
+
+<script>
+  /**
+   * The motion engine is loaded on every page. It is a single module that owns
+   * all timelines, so components opt in with data attributes instead of each
+   * importing an animation library.
+   */
+  import '@/lib/motion/engine';
+</script>

@@ -1,0 +1,97 @@
+---
+import { site } from '@/config/site';
+
+interface Props {
+  branding?: {
+    brandName?: string | null;
+    supportEmail?: string | null;
+    supportPhone?: string | null;
+  } | null;
+}
+
+/**
+ * Public site footer.
+ *
+ * Closes the page with an oversized wordmark, which is the strongest piece of
+ * typography available when there is no photography to end on.
+ */
+const { branding = null } = Astro.props;
+const brandName = branding?.brandName?.trim() || site.name;
+const supportEmail = branding?.supportEmail?.trim() || site.contact.email;
+
+const year = new Date().getFullYear();
+
+const policyLinks = [
+  { href: '/policies/terms', label: 'Terms' },
+  { href: '/policies/privacy', label: 'Privacy' },
+  { href: '/policies/refunds', label: 'Refund & cancellation policy' },
+  { href: '/policies/contact', label: 'Contact' },
+];
+---
+
+<footer class="relative mt-24 overflow-hidden border-t border-[var(--color-line)]">
+  <div
+    class="pointer-events-none absolute -top-40 left-1/2 h-80 w-[42rem] -translate-x-1/2 rounded-full opacity-20 blur-3xl"
+    style="background: radial-gradient(circle, var(--color-brand) 0%, transparent 70%)"
+    aria-hidden="true"
+  >
+  </div>
+
+  <div class="container-page relative py-14">
+    <div class="grid gap-10 md:grid-cols-[1.4fr_1fr]">
+      <div>
+        <p class="eyebrow">Stay in the loop</p>
+        <p class="mt-4 max-w-md text-[0.9375rem] leading-relaxed text-[var(--color-ink-muted)]">
+          {site.description}
+        </p>
+        {
+          supportEmail && (
+            <p class="mt-5 text-sm text-[var(--color-ink-muted)]">
+              Questions?{' '}
+              <a
+                href={`mailto:${supportEmail}`}
+                class="font-medium text-[var(--color-ink)] underline-offset-4 hover:underline"
+              >
+                {supportEmail}
+              </a>
+            </p>
+          )
+        }
+      </div>
+
+      <nav aria-label="Policies">
+        <p class="eyebrow-plain">Policies</p>
+        <ul class="mt-4 grid gap-2.5 text-sm">
+          {
+            policyLinks.map((link) => (
+              <li>
+                <a
+                  href={link.href}
+                  class="text-[var(--color-ink-muted)] transition-colors hover:text-[var(--color-ink)]"
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+    </div>
+
+    <div class="mt-14 select-none" aria-hidden="true">
+      <p
+        class="display display-xl text-[var(--color-ink)]/8 whitespace-nowrap"
+        style="font-size: clamp(3rem, 14vw, 11rem); color: color-mix(in srgb, var(--color-ink) 10%, transparent);"
+      >
+        {brandName}
+      </p>
+    </div>
+
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-line)] pt-6">
+      <p class="text-xs text-[var(--color-ink-faint)]">© {year} {brandName}</p>
+      <p class="text-xs text-[var(--color-ink-faint)]">
+        Built for organizers of conferences, workshops and meetups.
+      </p>
+    </div>
+  </div>
+</footer>

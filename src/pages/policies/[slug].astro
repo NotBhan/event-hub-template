@@ -1,0 +1,89 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import { getPolicy, policies } from '@/config/policies';
+import { site } from '@/config/site';
+
+/**
+ * Policy pages.
+ *
+ * Content lives in `src/config/policies.ts` so a client can adapt the wording
+ * without touching templates. Each page carries a review marker until the
+ * organizer has replaced the default text with their own.
+ */
+const { slug } = Astro.params;
+const policy = slug ? getPolicy(slug) : undefined;
+
+if (!policy) {
+  return Astro.redirect('/404', 302);
+}
+
+const contactEmail = site.contact.email;
+---
+
+<PublicLayout title={policy.title} description={policy.intro}>
+  <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <nav class="mb-6 text-sm" aria-label="Breadcrumb">
+      <a href="/" class="text-[var(--color-ink-muted)] hover:underline">Home</a>
+      <span class="text-[var(--color-ink-muted)]"> / </span>
+      <span class="text-[var(--color-ink-muted)]">{policy.title}</span>
+    </nav>
+
+    <h1 class="display display-lg text-[var(--color-ink)]">{policy.title}</h1>
+    <p class="mt-3 text-base text-[var(--color-ink-muted)]">{policy.intro}</p>
+
+    {
+      policy.needsReview && (
+        <p class="mt-6 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <span class="font-semibold">This page still needs review.</span> The wording below is a
+          starting point supplied with the platform. The organizer must replace it with their own
+          terms before this deployment goes live.
+        </p>
+      )
+    }
+
+    <div class="mt-8 space-y-8">
+      {
+        policy.sections.map((section) => (
+          <section>
+            <h2 class="text-lg font-semibold tracking-tight">{section.heading}</h2>
+            {section.body.map((paragraph) => (
+              <p class="mt-2 text-sm leading-relaxed text-[var(--color-ink-muted)]">{paragraph}</p>
+            ))}
+          </section>
+        ))
+      }
+
+      {
+        policy.slug === 'contact' && (
+          <section>
+            <h2 class="text-lg font-semibold tracking-tight">Email</h2>
+            <p class="mt-2 text-sm text-[var(--color-ink-muted)]">
+              <a href={`mailto:${contactEmail}`} class="font-medium text-[var(--color-brand)] hover:underline">
+                {contactEmail}
+              </a>
+            </p>
+            {site.contact.phone && (
+              <p class="mt-1 text-sm text-[var(--color-ink-muted)]">{site.contact.phone}</p>
+            )}
+          </section>
+        )
+      }
+    </div>
+
+    <nav class="mt-12 border-t border-[var(--color-line)] pt-6" aria-label="Other policies">
+      <ul class="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+        {
+          policies
+            .filter((page) => page.slug !== policy.slug)
+            .map((page) => (
+              <li>
+                <a href={`/policies/${page.slug}`} class="text-[var(--color-ink-muted)] hover:underline">
+                  {page.title}
+                </a>
+              </li>
+            ))
+        }
+      </ul>
+    </nav>
+  </div>
+</PublicLayout>

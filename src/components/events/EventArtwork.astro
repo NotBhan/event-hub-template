@@ -1,0 +1,193 @@
+---
+/**
+ * Event artwork.
+ *
+ * Real event photography is supplied per event through `coverImageUrl`. When an
+ * organizer has not uploaded an image, this renders a deterministic composition
+ * instead of a grey placeholder — derived from the event's slug, so an event
+ * always looks the same and no two events in a listing collide.
+ *
+ * The generated art is pure SVG and CSS: no external requests, nothing to license,
+ * and it scales without artefacts at any size.
+ */
+interface Props {
+  /** Used as the seed, and as the href when there is a real image. */
+  slug: string;
+  title?: string;
+  category?: string | null;
+  coverImageUrl?: string | null;
+  /** `card` is shorter and more compressed; `hero` is a full-bleed backdrop. */
+  variant?: 'card' | 'hero' | 'banner';
+  class?: string;
+}
+
+const {
+  slug,
+  title = '',
+  category = null,
+  coverImageUrl = null,
+  variant = 'card',
+  class: className = '',
+} = Astro.props;
+
+/** FNV-1a: small, stable, and dependency-free. */
+function hash(value: string): number {
+  let result = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    result ^= value.charCodeAt(index);
+    result = Math.imul(result, 16777619);
+  }
+  return Math.abs(result);
+}
+
+const seed = hash(slug);
+
+/**
+ * Five palettes, all built from the brand indigo and electric blue with one
+ * contrasting hue so a listing reads as varied without becoming a rainbow.
+ */
+const palettes = [
+  { from: '#1b1a45', via: '#3730a3', to: '#0b4a63', accent: '#a3e635' },
+  { from: '#07182b', via: '#1d4ed8', to: '#0b5566', accent: '#38bdf8' },
+  { from: '#26102e', via: '#5b21b6', to: '#152a52', accent: '#e879f9' },
+  { from: '#062a3d', via: '#0e7490', to: '#171a3d', accent: '#a3e635' },
+  { from: '#1a0f33', via: '#4c1d95', to: '#0f1c3a', accent: '#c084fc' },
+] as const;
+
+const palette = palettes[seed % palettes.length]!;
+
+/** Three compositions keep the generated art from looking repetitive. */
+const composition = seed % 3;
+const rotation = (seed % 40) - 20;
+const orbX = 20 + (seed % 60);
+const orbY = 15 + ((seed >> 3) % 50);
+
+const gradientId = `evt-grad-${seed}`;
+const glowId = `evt-glow-${seed}`;
+const isHero = variant === 'hero';
+const isBanner = variant === 'banner';
+---
+
+<div class:list={['relative overflow-hidden bg-[var(--color-surface)]', className]}>
+  {
+    coverImageUrl ? (
+      <img
+        src={coverImageUrl}
+        alt={title ? `${title} cover image` : ''}
+        class:list={[
+          'h-full w-full object-cover',
+          isHero ? 'scale-105' : 'transition-transform duration-700 ease-out group-hover:scale-[1.04]',
+        ]}
+        loading={isHero ? 'eager' : 'lazy'}
+        decoding="async"
+        width={isHero ? 1600 : 800}
+        height={isHero ? 1000 : 500}
+      />
+    ) : (
+      <svg
+        viewBox="0 0 800 500"
+        preserveAspectRatio="xMidYMid slice"
+        class="h-full w-full"
+        role="img"
+        aria-label={title ? `${title} artwork` : 'Event artwork'}
+      >
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color={palette.from} />
+            <stop offset="55%" stop-color={palette.via} />
+            <stop offset="100%" stop-color={palette.to} />
+          </linearGradient>
+
+          <radialGradient id={glowId} cx={`${orbX}%`} cy={`${orbY}%`} r="60%">
+            <stop offset="0%" stop-color={palette.accent} stop-opacity="0.4" />
+            <stop offset="100%" stop-color={palette.accent} stop-opacity="0" />
+          </radialGradient>
+
+          <linearGradient id={`${gradientId}-veil`} x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stop-color="#05070d" stop-opacity="0.78" />
+            <stop offset="100%" stop-color="#05070d" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+
+        <rect width="800" height="500" fill={`url(#${gradientId})`} />
+        <rect width="800" height="500" fill={`url(#${glowId})`} opacity="0.7" />
+        <rect width="800" height="500" fill="#05070d" opacity="0.22" />
+
+        <g stroke="#ffffff" fill="none" opacity="0.16">
+          {
+            composition === 0 && (
+              <>
+                {Array.from({ length: 9 }, (_, index) => (
+                  <circle
+                    cx="560"
+                    cy="250"
+                    r={70 + index * 34}
+                    stroke-width="1"
+                    opacity={1 - index * 0.09}
+                  />
+                ))}
+              </>
+            )
+          }
+          {
+            composition === 1 && (
+              <g transform={`rotate(${rotation} 400 250)`}>
+                {Array.from({ length: 14 }, (_, index) => (
+                  <line
+                    x1={-100 + index * 78}
+                    y1="-120"
+                    x2={-100 + index * 78}
+                    y2="620"
+                    stroke-width={index % 4 === 0 ? 2 : 1}
+                    opacity={0.5 + (index % 3) * 0.2}
+                  />
+                ))}
+              </g>
+            )
+          }
+          {
+            composition === 2 && (
+              <g>
+                {Array.from({ length: 6 }, (_, index) => (
+                  <path
+                    d={`M -60 ${110 + index * 62} Q 400 ${20 + index * 70}, 860 ${150 + index * 54}`}
+                    stroke-width={index === 2 ? 2.5 : 1}
+                    opacity={0.85 - index * 0.1}
+                  />
+                ))}
+              </g>
+            )
+          }
+        </g>
+
+        {isHero && <rect width="800" height="500" fill={`url(#${gradientId}-veil)`} />}
+
+        {
+          isBanner && (
+            <rect width="800" height="500" fill="#05070d" opacity="0.35" />
+          )
+        }
+      </svg>
+    )
+  }
+
+  <!-- Fine grain keeps large flat gradients from looking synthetic. -->
+  <div class="pointer-events-none absolute inset-0 opacity-[0.07] mix-blend-overlay" aria-hidden="true">
+    <svg width="100%" height="100%">
+      <filter id={`${gradientId}-noise`}>
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" />
+      </filter>
+      <rect width="100%" height="100%" filter={`url(#${gradientId}-noise)`} />
+    </svg>
+  </div>
+
+  {
+    category && (
+      <div class="absolute left-4 top-4">
+        <span class="badge border border-white/20 bg-black/35 text-white backdrop-blur-sm">
+          {category}
+        </span>
+      </div>
+    )
+  }
+</div>

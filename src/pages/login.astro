@@ -1,0 +1,108 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+
+/**
+ * Sign in.
+ *
+ * The form talks to the auth client, which posts to `/api/auth/sign-in/email`.
+ * Credentials never touch application code: the auth library verifies the
+ * password and issues the session cookie.
+ *
+ * A signed-in visitor is sent straight on, so a bookmarked login page does not
+ * produce a confusing "already signed in" state.
+ */
+const redirectTo = Astro.url.searchParams.get('next') ?? '/account/tickets';
+
+// Only same-site paths are honoured, so the parameter cannot be used as an open
+// redirect to somewhere else.
+const safeRedirect = redirectTo.startsWith('/') && !redirectTo.startsWith('//') ? redirectTo : '/account/tickets';
+
+if (Astro.locals.user) {
+  return Astro.redirect(safeRedirect, 302);
+}
+---
+
+<PublicLayout title="Sign in" noIndex>
+  <div class="mx-auto max-w-md px-4 py-14 sm:px-6">
+    <h1 class="display display-lg text-[var(--color-ink)]">Sign in</h1>
+    <p class="mt-2 text-sm text-[var(--color-ink-muted)]">
+      Access your tickets, or manage events if you are an organizer.
+    </p>
+
+    <form class="mt-8 space-y-4" data-auth-form data-mode="sign-in">
+      <div>
+        <label class="label" for="email">Email</label>
+        <input id="email" name="email" type="email" class="input" required autocomplete="email" />
+      </div>
+
+      <div>
+        <label class="label" for="password">Password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          class="input"
+          required
+          autocomplete="current-password"
+          minlength="10"
+        />
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full" data-submit>Sign in</button>
+    </form>
+
+    <div
+      class="mt-4 hidden rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+      data-error
+      role="alert"
+    >
+    </div>
+
+    <p class="mt-6 text-sm text-[var(--color-ink-muted)]">
+      No account yet? <a href="/signup" class="font-medium text-[var(--color-brand)] hover:underline">Create one</a>
+    </p>
+  </div>
+</PublicLayout>
+
+<script>
+  import { authClient } from '@/lib/auth/client';
+
+  const form = document.querySelector<HTMLFormElement>('[data-auth-form]');
+  const errorBox = document.querySelector<HTMLElement>('[data-error]');
+  const submit = document.querySelector<HTMLButtonElement>('[data-submit]');
+
+  const showError = (message: string) => {
+    if (!errorBox) return;
+    errorBox.textContent = message;
+    errorBox.classList.remove('hidden');
+  };
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const data = new FormData(form);
+    const email = String(data.get('email') ?? '');
+    const password = String(data.get('password') ?? '');
+
+    errorBox?.classList.add('hidden');
+    if (submit) {
+      submit.disabled = true;
+      submit.textContent = 'Signing in…';
+    }
+
+    const { error } = await authClient.signIn.email({ email, password });
+
+    if (error) {
+      // Deliberately vague: telling an attacker which half was wrong helps them.
+      showError('Those details did not match an account. Please check and try again.');
+      if (submit) {
+        submit.disabled = false;
+        submit.textContent = 'Sign in';
+      }
+      return;
+    }
+
+    const next = new URLSearchParams(window.location.search).get('next');
+    window.location.assign(next && next.startsWith('/') && !next.startsWith('//') ? next : '/account/tickets');
+  });
+</script>

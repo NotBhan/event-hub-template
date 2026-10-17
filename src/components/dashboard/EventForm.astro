@@ -1,0 +1,497 @@
+---
+import { COMMON_TIMEZONES, utcToWallClock } from '@/lib/timezone';
+
+/**
+ * Event form.
+ *
+ * Shared by the create and edit pages. Dates are submitted as naive wall-clock
+ * strings and converted to UTC on the server using the event's own timezone, so
+ * the time the organizer types is the time attendees in that location experience.
+ */
+interface Props {
+  action: string;
+  event?: {
+    id: string;
+    title: string;
+    summary: string | null;
+    description: string | null;
+    category: string | null;
+    coverImageUrl: string | null;
+    format: 'in_person' | 'online' | 'hybrid';
+    visibility: 'public' | 'private';
+    timezone: string;
+    startsAt: Date;
+    endsAt: Date;
+    registrationOpensAt: Date | null;
+    registrationClosesAt: Date | null;
+    refundPolicy: 'no_refunds' | 'refundable_until_start' | 'refundable_until_date' | 'custom';
+    refundableUntil: Date | null;
+    refundPolicyNotes: string | null;
+  } | null;
+  location?: {
+    venueName: string;
+    streetAddress: string | null;
+    city: string | null;
+    region: string | null;
+    postalCode: string | null;
+    country: string | null;
+    directions: string | null;
+  } | null;
+  access?: {
+    platform: string;
+    joinUrl: string | null;
+    accessInstructions: string | null;
+    publicNote: string | null;
+  } | null;
+  errors?: Record<string, string>;
+  values?: Record<string, string>;
+  defaultTimezone: string;
+  submitLabel: string;
+}
+
+const {
+  action,
+  event = null,
+  location = null,
+  access = null,
+  errors = {},
+  values = {},
+  defaultTimezone,
+  submitLabel,
+} = Astro.props;
+
+const timezone = event?.timezone ?? defaultTimezone;
+
+/** Submitted value wins, so a failed save does not lose the organizer's edits. */
+function value(field: string, fallback: string | null | undefined): string {
+  return values[field] ?? fallback ?? '';
+}
+
+function wallClock(date: Date | null | undefined): string {
+  return date ? utcToWallClock(date, timezone) : '';
+}
+
+const startsAt = value('startsAt', wallClock(event?.startsAt));
+const endsAt = value('endsAt', wallClock(event?.endsAt));
+const format = value('format', event?.format ?? 'in_person');
+const visibility = value('visibility', event?.visibility ?? 'public');
+const selectedTimezone = value('timezone', timezone);
+---
+
+<form method="POST" action={action} class="space-y-6">
+  {
+    event && <input type="hidden" name="eventId" value={event.id} />
+  }
+
+  {
+    errors._form && (
+      <p class="rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        {errors._form}
+      </p>
+    )
+  }
+
+  <section class="card p-5">
+    <h2 class="text-lg font-semibold">Basics</h2>
+
+    <div class="mt-4 space-y-4">
+      <div>
+        <label class="label" for="title">Event title</label>
+        <input
+          id="title"
+          name="title"
+          class="input"
+          required
+          maxlength="200"
+          value={value('title', event?.title)}
+          aria-invalid={errors.title ? 'true' : undefined}
+        />
+        {errors.title && <p class="help-text text-red-700">{errors.title}</p>}
+      </div>
+
+      <div>
+        <label class="label" for="summary">Short summary</label>
+        <input
+          id="summary"
+          name="summary"
+          class="input"
+          maxlength="300"
+          placeholder="One line shown on event cards"
+          value={value('summary', event?.summary)}
+        />
+        {errors.summary && <p class="help-text text-red-700">{errors.summary}</p>}
+      </div>
+
+      <div>
+        <label class="label" for="description">Description</label>
+        <textarea
+          id="description"
+          name="description"
+          class="input min-h-32"
+          rows="8"
+          placeholder="What attendees should know about this event"
+        >{value('description', event?.description)}</textarea>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class="label" for="category">Category</label>
+          <input
+            id="category"
+            name="category"
+            class="input"
+            maxlength="60"
+            placeholder="Conference, Workshop, Meetup…"
+            value={value('category', event?.category)}
+          />
+        </div>
+
+        <div>
+          <label class="label" for="coverImageUrl">Cover image URL</label>
+          <input
+            id="coverImageUrl"
+            name="coverImageUrl"
+            type="url"
+            class="input"
+            placeholder="https://…"
+            value={value('coverImageUrl', event?.coverImageUrl)}
+          />
+          {errors.coverImageUrl && <p class="help-text text-red-700">{errors.coverImageUrl}</p>}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card p-5">
+    <h2 class="text-lg font-semibold">Format and visibility</h2>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="label" for="format">Format</label>
+        <select id="format" name="format" class="input" data-event-format>
+          <option value="in_person" selected={format === 'in_person'}>In person</option>
+          <option value="online" selected={format === 'online'}>Online</option>
+          <option value="hybrid" selected={format === 'hybrid'}>Hybrid</option>
+        </select>
+        {errors.format && <p class="help-text text-red-700">{errors.format}</p>}
+      </div>
+
+      <div>
+        <label class="label" for="visibility">Visibility</label>
+        <select id="visibility" name="visibility" class="input">
+          <option value="public" selected={visibility === 'public'}>Public — listed on the site</option>
+          <option value="private" selected={visibility === 'private'}>Private — link only</option>
+        </select>
+        <p class="help-text">Private events are never listed, but their page still works for direct links.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card p-5">
+    <h2 class="text-lg font-semibold">Schedule</h2>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      <div class="sm:col-span-2">
+        <label class="label" for="timezone">Event timezone</label>
+        <select id="timezone" name="timezone" class="input">
+          {
+            COMMON_TIMEZONES.map((zone) => (
+              <option value={zone} selected={zone === selectedTimezone}>
+                {zone}
+              </option>
+            ))
+          }
+          {
+            !(COMMON_TIMEZONES as readonly string[]).includes(selectedTimezone) && (
+              <option value={selectedTimezone} selected>
+                {selectedTimezone}
+              </option>
+            )
+          }
+        </select>
+        <p class="help-text">
+          All times below are in this timezone, and attendees see them in it too.
+        </p>
+      </div>
+
+      <div>
+        <label class="label" for="startsAt">Starts</label>
+        <input
+          id="startsAt"
+          name="startsAt"
+          type="datetime-local"
+          class="input"
+          required
+          value={startsAt}
+          aria-invalid={errors.startsAt ? 'true' : undefined}
+        />
+        {errors.startsAt && <p class="help-text text-red-700">{errors.startsAt}</p>}
+      </div>
+
+      <div>
+        <label class="label" for="endsAt">Ends</label>
+        <input
+          id="endsAt"
+          name="endsAt"
+          type="datetime-local"
+          class="input"
+          required
+          value={endsAt}
+          aria-invalid={errors.endsAt ? 'true' : undefined}
+        />
+        {errors.endsAt && <p class="help-text text-red-700">{errors.endsAt}</p>}
+      </div>
+
+      <div>
+        <label class="label" for="registrationOpensAt">
+          Registration opens <span class="font-normal">(optional)</span>
+        </label>
+        <input
+          id="registrationOpensAt"
+          name="registrationOpensAt"
+          type="datetime-local"
+          class="input"
+          value={value('registrationOpensAt', wallClock(event?.registrationOpensAt))}
+        />
+      </div>
+
+      <div>
+        <label class="label" for="registrationClosesAt">
+          Registration closes <span class="font-normal">(optional)</span>
+        </label>
+        <input
+          id="registrationClosesAt"
+          name="registrationClosesAt"
+          type="datetime-local"
+          class="input"
+          value={value('registrationClosesAt', wallClock(event?.registrationClosesAt))}
+          aria-invalid={errors.registrationClosesAt ? 'true' : undefined}
+        />
+        {errors.registrationClosesAt && (
+          <p class="help-text text-red-700">{errors.registrationClosesAt}</p>
+        )}
+      </div>
+    </div>
+  </section>
+
+  <section class="card p-5" data-venue-section>
+    <h2 class="text-lg font-semibold">Venue</h2>
+    <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+      Required for in-person and hybrid events.
+    </p>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      <div class="sm:col-span-2">
+        <label class="label" for="venueName">Venue name</label>
+        <input
+          id="venueName"
+          name="venueName"
+          class="input"
+          value={value('venueName', location?.venueName)}
+          aria-invalid={errors.venueName ? 'true' : undefined}
+        />
+        {errors.venueName && <p class="help-text text-red-700">{errors.venueName}</p>}
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="label" for="streetAddress">Street address</label>
+        <input
+          id="streetAddress"
+          name="streetAddress"
+          class="input"
+          value={value('streetAddress', location?.streetAddress)}
+        />
+      </div>
+
+      <div>
+        <label class="label" for="city">City</label>
+        <input id="city" name="city" class="input" value={value('city', location?.city)} />
+      </div>
+
+      <div>
+        <label class="label" for="region">State or region</label>
+        <input id="region" name="region" class="input" value={value('region', location?.region)} />
+      </div>
+
+      <div>
+        <label class="label" for="postalCode">Postal code</label>
+        <input
+          id="postalCode"
+          name="postalCode"
+          class="input"
+          value={value('postalCode', location?.postalCode)}
+        />
+      </div>
+
+      <div>
+        <label class="label" for="country">Country</label>
+        <input id="country" name="country" class="input" value={value('country', location?.country)} />
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="label" for="directions">Directions</label>
+        <textarea
+          id="directions"
+          name="directions"
+          class="input"
+          rows="2"
+          placeholder="Parking, public transport, accessibility notes"
+        >{value('directions', location?.directions)}</textarea>
+      </div>
+    </div>
+  </section>
+
+  <section class="card p-5" data-access-section>
+    <h2 class="text-lg font-semibold">Online access</h2>
+    <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+      Required for online and hybrid events. The joining link and instructions are only ever shown
+      to confirmed attendees and staff.
+    </p>
+
+    <div class="mt-4 grid gap-4">
+      <div>
+        <label class="label" for="accessPlatform">Platform</label>
+        <input
+          id="accessPlatform"
+          name="accessPlatform"
+          class="input"
+          placeholder="Zoom, Google Meet, live stream…"
+          value={value('accessPlatform', access?.platform)}
+          aria-invalid={errors.accessPlatform ? 'true' : undefined}
+        />
+        {errors.accessPlatform && <p class="help-text text-red-700">{errors.accessPlatform}</p>}
+      </div>
+
+      <div>
+        <label class="label" for="joinUrl">Joining link</label>
+        <input
+          id="joinUrl"
+          name="joinUrl"
+          type="url"
+          class="input"
+          placeholder="https://…"
+          value={value('joinUrl', access?.joinUrl)}
+        />
+        {errors.joinUrl && <p class="help-text text-red-700">{errors.joinUrl}</p>}
+      </div>
+
+      <div>
+        <label class="label" for="publicNote">
+          Public note <span class="font-normal">(shown before registration)</span>
+        </label>
+        <input
+          id="publicNote"
+          name="publicNote"
+          class="input"
+          placeholder="The link is sent to registered attendees before the session."
+          value={value('publicNote', access?.publicNote)}
+        />
+      </div>
+
+      <div>
+        <label class="label" for="accessInstructions">Instructions for attendees</label>
+        <textarea
+          id="accessInstructions"
+          name="accessInstructions"
+          class="input"
+          rows="3"
+          placeholder="Shown to confirmed attendees on their ticket page"
+        >{value('accessInstructions', access?.accessInstructions)}</textarea>
+      </div>
+    </div>
+  </section>
+
+  <section class="card p-5">
+    <h2 class="text-lg font-semibold">Refund policy</h2>
+    <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+      Shown on the event page and enforced when a refund is requested.
+    </p>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="label" for="refundPolicy">Policy</label>
+        <select id="refundPolicy" name="refundPolicy" class="input">
+          <option
+            value="no_refunds"
+            selected={value('refundPolicy', event?.refundPolicy ?? 'no_refunds') === 'no_refunds'}
+          >
+            No refunds
+          </option>
+          <option
+            value="refundable_until_start"
+            selected={value('refundPolicy', event?.refundPolicy) === 'refundable_until_start'}
+          >
+            Refundable until the event starts
+          </option>
+          <option
+            value="refundable_until_date"
+            selected={value('refundPolicy', event?.refundPolicy) === 'refundable_until_date'}
+          >
+            Refundable until a set date
+          </option>
+          <option value="custom" selected={value('refundPolicy', event?.refundPolicy) === 'custom'}>
+            Custom — decided case by case
+          </option>
+        </select>
+      </div>
+
+      <div>
+        <label class="label" for="refundableUntil">
+          Refunds close on <span class="font-normal">(when required by the policy)</span>
+        </label>
+        <input
+          id="refundableUntil"
+          name="refundableUntil"
+          type="datetime-local"
+          class="input"
+          value={value('refundableUntil', wallClock(event?.refundableUntil))}
+          aria-invalid={errors.refundableUntil ? 'true' : undefined}
+        />
+        {errors.refundableUntil && <p class="help-text text-red-700">{errors.refundableUntil}</p>}
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="label" for="refundPolicyNotes">Notes shown to attendees</label>
+        <textarea
+          id="refundPolicyNotes"
+          name="refundPolicyNotes"
+          class="input"
+          rows="2"
+          placeholder="Full refunds up to 48 hours before the event."
+        >{value('refundPolicyNotes', event?.refundPolicyNotes)}</textarea>
+      </div>
+    </div>
+  </section>
+
+  <div class="flex items-center gap-3">
+    <button type="submit" class="btn btn-primary">{submitLabel}</button>
+    <slot name="secondary" />
+  </div>
+</form>
+
+<script>
+  /**
+   * Shows only the sections the chosen format needs.
+   *
+   * Presentation only: the server validates the required fields for the selected
+   * format regardless of what is visible here.
+   */
+  const formatSelect = document.querySelector<HTMLSelectElement>('[data-event-format]');
+  const venueSection = document.querySelector<HTMLElement>('[data-venue-section]');
+  const accessSection = document.querySelector<HTMLElement>('[data-access-section]');
+
+  const sync = () => {
+    const format = formatSelect?.value ?? 'in_person';
+
+    if (venueSection) {
+      venueSection.hidden = format === 'online';
+    }
+
+    if (accessSection) {
+      accessSection.hidden = format === 'in_person';
+    }
+  };
+
+  formatSelect?.addEventListener('change', sync);
+  sync();
+</script>

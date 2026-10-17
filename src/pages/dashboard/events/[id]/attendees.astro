@@ -1,0 +1,182 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import StatusBadge from '@/components/ui/StatusBadge.astro';
+import { organizerGuard } from '@/lib/permissions/page-guards';
+import { can } from '@/lib/permissions/guards';
+import { getEventForOrganization } from '@/features/events/service';
+import { listAttendees } from '@/features/orders/service';
+import { getCheckInStats } from '@/features/check-in/service';
+import { ORDER_STATUS_LABELS, TICKET_STATUS_LABELS } from '@/lib/format';
+
+/**
+ * Attendee list.
+ *
+ * Search and pagination are query parameters, so a filtered list is a shareable
+ * link. The export is a separate authorized endpoint rather than client-side
+ * generation, so the same permission check applies to the data leaving the system.
+ */
+const guard = organizerGuard(Astro);
+if (!guard.ok) return Astro.redirect(guard.redirectTo ?? '/dashboard/no-access', 302);
+
+const { membership } = guard;
+const eventId = Astro.params.id;
+
+if (!eventId) return Astro.redirect('/dashboard/events', 302);
+
+let event;
+try {
+  event = await getEventForOrganization(eventId, membership.organizationId);
+} catch {
+  return Astro.redirect('/dashboard/events', 302);
+}
+
+const search = Astro.url.searchParams.get('q')?.trim() ?? '';
+const page = Math.max(Number(Astro.url.searchParams.get('page') ?? '1') || 1, 1);
+const perPage = 50;
+
+const attendees = await listAttendees({
+  eventId: event.id,
+  search: search || undefined,
+  limit: perPage,
+  offset: (page - 1) * perPage,
+});
+
+const stats = await getCheckInStats(event.id);
+
+const canExport = can(Astro, { attendee: ['export'] });
+
+function pageUrl(target: number): string {
+  const params = new URLSearchParams(Astro.url.searchParams);
+  params.set('page', String(target));
+  return `?${params.toString()}`;
+}
+---
+
+<DashboardLayout title={`Attendees · ${event.title}`} description="Attendee list" section="events">
+  <nav class="mb-6 text-sm" aria-label="Breadcrumb">
+    <a href="/dashboard/events" class="text-[var(--color-ink-muted)] hover:underline">Events</a>
+    <span class="text-[var(--color-ink-muted)]"> / </span>
+    <a href={`/dashboard/events/${event.id}`} class="text-[var(--color-ink-muted)] hover:underline">
+      {event.title}
+    </a>
+    <span class="text-[var(--color-ink-muted)]"> / </span>
+    <span class="text-[var(--color-ink-muted)]">Attendees</span>
+  </nav>
+
+  <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight">Attendees</h1>
+      <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+        {stats.issued} tickets issued · {stats.admitted} admitted
+      </p>
+    </div>
+
+    <div class="flex gap-2">
+      <a href={`/dashboard/events/${event.id}/orders`} class="btn btn-secondary btn-sm">Orders</a>
+      {
+        canExport && (
+          <a
+            href={`/dashboard/events/${event.id}/attendees.csv`}
+            class="btn btn-secondary btn-sm"
+            download
+          >
+            Export CSV
+          </a>
+        )
+      }
+    </div>
+  </div>
+
+  <form method="GET" class="card mb-6 p-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <div class="min-w-56 flex-1">
+        <label class="label" for="q">Search</label>
+        <input
+          id="q"
+          name="q"
+          type="search"
+          class="input"
+          placeholder="Name, email, registration or ticket reference"
+          value={search}
+        />
+      </div>
+      <button type="submit" class="btn btn-secondary btn-sm">Search</button>
+      {search && <a href="?" class="btn btn-ghost btn-sm">Clear</a>}
+    </div>
+  </form>
+
+  {
+    attendees.length === 0 ? (
+      <p class="card p-8 text-center text-sm text-[var(--color-ink-muted)]">
+        {search ? 'No attendees match that search.' : 'No attendees yet.'}
+      </p>
+    ) : (
+      <div class="card overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Attendee</th>
+              <th scope="col">Ticket</th>
+              <th scope="col">Ticket reference</th>
+              <th scope="col">Order</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {attendees.map((row) => (
+              <tr>
+                <td>
+                  <p class="font-medium">{row.name}</p>
+                  <p class="text-xs text-[var(--color-ink-muted)]">{row.email}</p>
+                  {row.phone && <p class="text-xs text-[var(--color-ink-muted)]">{row.phone}</p>}
+                </td>
+                <td>{row.ticketTypeName}</td>
+                <td class="font-mono text-xs">{row.ticketReference ?? '—'}</td>
+                <td>
+                  <p class="font-mono text-xs">{row.orderReference}</p>
+                  <p class="mt-0.5">
+                    <StatusBadge
+                      label={ORDER_STATUS_LABELS[row.orderStatus] ?? row.orderStatus}
+                      status={row.orderStatus}
+                    />
+                  </p>
+                </td>
+                <td>
+                  {row.ticketStatus ? (
+                    <StatusBadge
+                      label={TICKET_STATUS_LABELS[row.ticketStatus] ?? row.ticketStatus}
+                      status={row.ticketStatus}
+                    />
+                  ) : (
+                    <span class="text-xs text-[var(--color-ink-muted)]">Not issued</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between">
+        <a
+          href={pageUrl(page - 1)}
+          class:list={['btn btn-secondary btn-sm', page <= 1 && 'pointer-events-none opacity-50']}
+          aria-disabled={page <= 1}
+        >
+          Previous
+        </a>
+        <span class="text-sm text-[var(--color-ink-muted)]">Page {page}</span>
+        <a
+          href={pageUrl(page + 1)}
+          class:list={[
+            'btn btn-secondary btn-sm',
+            attendees.length < perPage && 'pointer-events-none opacity-50',
+          ]}
+          aria-disabled={attendees.length < perPage}
+        >
+          Next
+        </a>
+      </div>
+    )
+  }
+</DashboardLayout>

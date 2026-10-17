@@ -1,0 +1,394 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import { getOrderDetail, getLatestPayment, getOrder } from '@/features/orders/service';
+import { startPayment } from '@/features/payments/service';
+import { assertRegistrationAccess } from '@/lib/security/registration-access';
+import { formatEventWindow } from '@/lib/format';
+import { formatMoney } from '@/lib/money';
+import { HttpError } from '@/lib/security/errors';
+
+/**
+ * Checkout.
+ *
+ * The monetary decision has already been made on the server: this page displays
+ * a total that was computed from database prices when the order was created, and
+ * hands the browser only what it needs to open the hosted checkout.
+ */
+const { orderId } = Astro.params;
+
+if (!orderId) {
+  return Astro.redirect('/events', 302);
+}
+
+const order = await getOrder(orderId);
+
+if (!order) {
+  return Astro.redirect('/404', 302);
+}
+
+let accessError: string | null = null;
+
+try {
+  assertRegistrationAccess({
+    cookies: Astro.cookies,
+    order,
+    key: Astro.url.searchParams.get('key'),
+    viewerUserId: Astro.locals.user?.id ?? null,
+    orderUserId: order.userId,
+  });
+} catch (error) {
+  accessError = error instanceof HttpError ? error.message : 'You cannot view this order.';
+}
+
+if (accessError) {
+  return Astro.redirect(`/registrations/${order.publicReference}`, 302);
+}
+
+// Already settled: send the buyer to their tickets rather than showing checkout.
+if (order.status === 'confirmed') {
+  return Astro.redirect(`/registrations/${order.publicReference}`, 303);
+}
+
+if (order.status === 'expired' || order.status === 'cancelled') {
+  return Astro.redirect(`/registrations/${order.publicReference}`, 303);
+}
+
+const detail = await getOrderDetail(order.id);
+if (!detail) {
+  return Astro.redirect('/404', 302);
+}
+
+const existingPayment = await getLatestPayment(order.id);
+
+let session = null;
+let startError: string | null = null;
+
+try {
+  session = await startPayment(order.id);
+} catch (error) {
+  startError =
+    error instanceof HttpError
+      ? error.message
+      : 'We could not start the payment. Please try again in a moment.';
+}
+
+const when = formatEventWindow(detail.event.startsAt, detail.event.endsAt, detail.event.timezone);
+
+const expiresAt = order.reservationExpiresAt;
+const minutesLeft = expiresAt
+  ? Math.max(Math.ceil((expiresAt.getTime() - Date.now()) / 60_000), 0)
+  : null;
+
+const checkoutData = session
+  ? JSON.stringify({
+      orderId: order.id,
+      simulated: session.simulated,
+      provider: session.provider,
+      reference: order.publicReference,
+      checkoutPayload: session.checkoutPayload,
+      amountLabel: formatMoney(order.totalMinor, order.currency),
+    })
+  : null;
+---
+
+<PublicLayout title="Checkout" noIndex>
+  <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <h1 class="display display-lg text-[var(--color-ink)]">Complete your registration</h1>
+    <p class="mt-2 text-sm text-[var(--color-ink-muted)]">
+      Order <span class="font-medium">{order.publicReference}</span>
+    </p>
+
+    {
+      minutesLeft !== null && (
+        <p class="mt-3 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Your tickets are held for about {minutesLeft}
+          {minutesLeft === 1 ? 'minute' : 'minutes'}. After that they are released for others.
+        </p>
+      )
+    }
+
+    {
+      existingPayment?.status === 'failed' && (
+        <p class="mt-3 rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          Your last payment attempt did not go through. You can try again below.
+        </p>
+      )
+    }
+
+    {
+      startError && (
+        <p class="mt-3 rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          {startError}
+        </p>
+      )
+    }
+
+    <section class="card mt-6 p-5">
+      <h2 class="text-lg font-semibold">{detail.event.title}</h2>
+      <p class="mt-1 text-sm text-[var(--color-ink-muted)]">{when}</p>
+
+      <table class="data-table mt-5">
+        <caption class="sr-only">Order summary</caption>
+        <thead>
+          <tr>
+            <th scope="col">Ticket</th>
+            <th scope="col" class="text-center">Qty</th>
+            <th scope="col" class="text-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            detail.items.map((item) => (
+              <tr>
+                <td>
+                  <p class="font-medium">{item.ticketNameSnapshot}</p>
+                  <p class="text-xs text-[var(--color-ink-muted)]">
+                    {formatMoney(item.unitPriceMinorSnapshot, item.currency)} each
+                  </p>
+                </td>
+                <td class="text-center">{item.quantity}</td>
+                <td class="text-right">{formatMoney(item.lineTotalMinor, item.currency)}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" class="text-right font-medium">Total</td>
+            <td class="text-right text-base font-semibold">
+              {formatMoney(order.totalMinor, order.currency)}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+
+    <section class="card mt-6 p-5">
+      <h2 class="text-lg font-semibold">Attendees</h2>
+      <ul class="mt-3 space-y-2 text-sm">
+        {
+          detail.attendees.map((attendee) => (
+            <li class="flex flex-wrap items-baseline justify-between gap-2">
+              <span class="font-medium">{attendee.name}</span>
+              <span class="text-[var(--color-ink-muted)]">
+                {attendee.ticketTypeName} · {attendee.email}
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    {
+      session?.simulated && (
+        <div class="mt-6 rounded-[var(--radius-card)] border border-sky-300 bg-sky-50 p-4">
+          <p class="font-semibold text-sky-900">Simulated checkout</p>
+          <p class="mt-1 text-sm text-sky-900">
+            This deployment is running the simulated payment provider. No gateway is contacted and
+            no money moves — this only demonstrates the checkout and ticket flow. A live
+            installation uses a real payment provider.
+          </p>
+        </div>
+      )
+    }
+
+    <div class="mt-6 flex flex-wrap items-center gap-3">
+      {
+        session ? (
+          <button type="button" class="btn btn-primary" data-pay-button>
+            {session.simulated ? 'Simulate a successful payment' : `Pay ${formatMoney(order.totalMinor, order.currency)}`}
+          </button>
+        ) : (
+          <a href={`/register/${detail.event.slug}`} class="btn btn-secondary">
+            Start again
+          </a>
+        )
+      }
+
+      {
+        session?.simulated && (
+          <button type="button" class="btn btn-secondary" data-fail-button>
+            Simulate a failed payment
+          </button>
+        )
+      }
+    </div>
+
+    <p class="mt-4 text-xs text-[var(--color-ink-muted)]" data-status-region role="status" aria-live="polite">
+    </p>
+  </div>
+
+  {checkoutData && <script type="application/json" id="checkout-data" set:html={checkoutData} />}
+</PublicLayout>
+
+<script>
+  /**
+   * Checkout.
+   *
+   * For a real gateway this opens the hosted checkout and posts the result to the
+   * server for verification. For the simulated provider it posts directly. In
+   * neither case does the browser decide that an order is paid: it only reports
+   * what the provider said, and the server verifies it independently.
+   */
+  interface CheckoutData {
+    orderId: string;
+    simulated: boolean;
+    provider: string;
+    reference: string;
+    checkoutPayload: Record<string, unknown>;
+    amountLabel: string;
+  }
+
+  const configElement = document.getElementById('checkout-data');
+  const statusRegion = document.querySelector<HTMLElement>('[data-status-region]');
+  const payButton = document.querySelector<HTMLButtonElement>('[data-pay-button]');
+  const failButton = document.querySelector<HTMLButtonElement>('[data-fail-button]');
+
+  const setStatus = (message: string, tone: 'info' | 'error' = 'info') => {
+    if (!statusRegion) return;
+    statusRegion.textContent = message;
+    statusRegion.className =
+      tone === 'error'
+        ? 'mt-4 text-sm text-red-700'
+        : 'mt-4 text-sm text-[var(--color-ink-muted)]';
+  };
+
+  const setBusy = (busy: boolean) => {
+    for (const button of [payButton, failButton]) {
+      if (button) button.disabled = busy;
+    }
+  };
+
+  if (configElement?.textContent) {
+    const config = JSON.parse(configElement.textContent) as CheckoutData;
+
+    const finish = async (payload: Record<string, unknown>) => {
+      setBusy(true);
+      setStatus('Confirming your payment…');
+
+      try {
+        const response = await fetch('/api/payments/verify', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const result = (await response.json()) as { confirmed?: boolean; message?: string; error?: string };
+
+        if (!response.ok) {
+          setStatus(result.error ?? 'We could not confirm that payment.', 'error');
+          setBusy(false);
+          return;
+        }
+
+        setStatus(result.message ?? 'Payment received.');
+        window.location.assign(`/registrations/${config.reference}`);
+      } catch {
+        setStatus('We could not reach the server. Please check your connection and try again.', 'error');
+        setBusy(false);
+      }
+    };
+
+    const simulate = async (outcome: 'success' | 'failure') => {
+      setBusy(true);
+      setStatus(outcome === 'success' ? 'Simulating a payment…' : 'Simulating a failed payment…');
+
+      try {
+        const response = await fetch('/api/payments/simulate', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ orderId: config.orderId, outcome }),
+        });
+
+        const result = (await response.json()) as { confirmed?: boolean; message?: string; error?: string };
+
+        if (!response.ok) {
+          setStatus(result.error ?? 'The simulation failed.', 'error');
+          setBusy(false);
+          return;
+        }
+
+        if (outcome === 'failure') {
+          setStatus('Simulated failure recorded. The order is still awaiting payment.', 'error');
+          setBusy(false);
+          window.location.reload();
+          return;
+        }
+
+        setStatus(result.message ?? 'Payment received.');
+        window.location.assign(`/registrations/${config.reference}`);
+      } catch {
+        setStatus('We could not reach the server.', 'error');
+        setBusy(false);
+      }
+    };
+
+    payButton?.addEventListener('click', () => {
+      if (config.simulated) {
+        void simulate('success');
+        return;
+      }
+
+      void openHostedCheckout(config, finish);
+    });
+
+    failButton?.addEventListener('click', () => {
+      void simulate('failure');
+    });
+  }
+
+  /** Loads the gateway's checkout script on demand and opens it. */
+  async function openHostedCheckout(
+    config: CheckoutData,
+    onResult: (payload: Record<string, unknown>) => Promise<void>,
+  ): Promise<void> {
+    const options = {
+      ...config.checkoutPayload,
+      handler: (response: { razorpay_payment_id: string; razorpay_signature: string }) => {
+        void onResult({
+          orderId: config.orderId,
+          providerPaymentId: response.razorpay_payment_id,
+          signature: response.razorpay_signature,
+        });
+      },
+      modal: {
+        ondismiss: () => setStatus('Checkout closed. Your tickets are still held for a short while.'),
+      },
+      theme: { color: '#4f46e5' },
+    };
+
+    try {
+      await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+
+      const RazorpayCheckout = (window as unknown as {
+        Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+      }).Razorpay;
+
+      if (!RazorpayCheckout) {
+        setStatus('The payment window could not be loaded. Please refresh and try again.', 'error');
+        return;
+      }
+
+      new RazorpayCheckout(options).open();
+    } catch {
+      setStatus('The payment window could not be loaded. Please refresh and try again.', 'error');
+    }
+  }
+
+  function loadScript(src: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
+      if (existing) {
+        resolve();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load the checkout script'));
+      document.head.appendChild(script);
+    });
+  }
+</script>

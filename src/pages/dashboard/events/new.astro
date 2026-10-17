@@ -1,0 +1,62 @@
+---
+import { actions } from 'astro:actions';
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import EventForm from '@/components/dashboard/EventForm.astro';
+import { organizerGuard } from '@/lib/permissions/page-guards';
+import { can } from '@/lib/permissions/guards';
+import { getOrganizationSettings } from '@/features/events/service';
+import { site } from '@/config/site';
+
+/**
+ * Create an event.
+ *
+ * The event starts as a draft. Publishing is a separate action that checks the
+ * event actually has something to sell, so a half-finished event cannot go live.
+ */
+const guard = organizerGuard(Astro);
+if (!guard.ok) return Astro.redirect(guard.redirectTo ?? '/dashboard/no-access', 302);
+
+const { membership } = guard;
+
+if (!can(Astro, { event: ['create'] })) {
+  return Astro.redirect('/dashboard/events', 302);
+}
+
+const settings = await getOrganizationSettings(membership.organizationId);
+const defaultTimezone = settings?.defaultTimezone ?? site.defaultTimezone;
+
+const previous = Astro.getActionResult(actions.createEvent);
+const result = previous?.data;
+
+if (result?.ok && result.id) {
+  return Astro.redirect(`/dashboard/events/${result.id}`, 303);
+}
+
+const errors = result && !result.ok ? (result.fieldErrors ?? {}) : {};
+const values = result && !result.ok ? (result.values ?? {}) : {};
+---
+
+<DashboardLayout title="New event" description="Create a new event" section="events">
+  <div class="mx-auto max-w-3xl">
+    <nav class="mb-6 text-sm" aria-label="Breadcrumb">
+      <a href="/dashboard/events" class="text-[var(--color-ink-muted)] hover:underline">Events</a>
+      <span class="text-[var(--color-ink-muted)]"> / </span>
+      <span class="text-[var(--color-ink-muted)]">New event</span>
+    </nav>
+
+    <h1 class="text-2xl font-bold tracking-tight">Create an event</h1>
+    <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+      It is saved as a draft. Add ticket types and publish when you are ready.
+    </p>
+
+    <div class="mt-6">
+      <EventForm
+        action={actions.createEvent}
+        errors={errors}
+        values={values}
+        defaultTimezone={defaultTimezone}
+        submitLabel="Save draft"
+      />
+    </div>
+  </div>
+</DashboardLayout>

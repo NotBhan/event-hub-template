@@ -1,0 +1,38 @@
+# Build output
+dist/
+.astro/
+
+# Dependencies
+node_modules/
+
+# Environment (never commit real credentials)
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+coverage/
+test-results/
+playwright-report/
+.playwright/
+
+# Backups created by deployment tooling
+backups/
+*.dump
+*.sql.gz
+
+# Editor
+.vscode/
+.idea/
+
+# Local visual review captures
+screenshots/

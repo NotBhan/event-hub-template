@@ -1,0 +1,47 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+
+/**
+ * Access denied.
+ *
+ * A page rather than a bare 403 so the visitor understands whether they are
+ * signed out, not a member, or a member without organizer rights — three very
+ * different situations that a blank error page would conflate.
+ *
+ * The reason is passed as a query parameter because none of these states is
+ * sensitive on its own: every one of them is already visible from the header.
+ */
+const reason = Astro.url.searchParams.get('reason');
+
+const messages: Record<string, { title: string; body: string; action?: { href: string; label: string } }> = {
+  'not-a-member': {
+    title: 'No organizer access',
+    body: 'Your account is not part of an organization on this deployment. An owner has to invite you as staff before you can open the dashboard.',
+    action: { href: '/account/tickets', label: 'Go to my tickets' },
+  },
+  'not-an-organizer': {
+    title: 'No organizer access',
+    body: 'Your account does not have permission to open the organizer dashboard. If you believe that is wrong, ask an owner to check your role.',
+    action: { href: '/account/tickets', label: 'Go to my tickets' },
+  },
+};
+
+const message = messages[reason ?? ''] ?? messages['not-an-organizer']!;
+---
+
+<PublicLayout title="No organizer access" noIndex>
+  <div class="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
+    <h1 class="text-2xl font-semibold tracking-tight">{message.title}</h1>
+    <p class="mt-3 text-sm text-[var(--color-ink-muted)]">{message.body}</p>
+    <div class="mt-8 flex flex-wrap justify-center gap-3">
+      {
+        message.action && (
+          <a href={message.action.href} class="btn btn-primary">
+            {message.action.label}
+          </a>
+        )
+      }
+      <a href="/events" class="btn btn-secondary">Browse events</a>
+    </div>
+  </div>
+</PublicLayout>

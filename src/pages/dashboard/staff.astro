@@ -1,0 +1,253 @@
+---
+import { actions } from 'astro:actions';
+import { eq } from 'drizzle-orm';
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import StatusBadge from '@/components/ui/StatusBadge.astro';
+import { organizerGuard } from '@/lib/permissions/page-guards';
+import { can } from '@/lib/permissions/guards';
+import { db } from '@/lib/db/client';
+import { invitation, member, user } from '@/lib/db/schema';
+import { roleLabels, type OrganizationRole } from '@/lib/permissions';
+import { formatDateTime, formatRelative } from '@/lib/format';
+
+/**
+ * Staff management.
+ *
+ * Roles decide what every other page will allow, so this page is deliberately
+ * restricted. Two rules are enforced here and again in the action:
+ *
+ *  - only an owner may grant ownership, otherwise an admin could promote
+ *    themselves and the role model would be decorative;
+ *  - an owner cannot be removed until their role is changed, so an organization
+ *    can never be left with nobody able to manage it.
+ */
+const guard = organizerGuard(Astro);
+if (!guard.ok) return Astro.redirect(guard.redirectTo ?? '/dashboard/no-access', 302);
+
+const { membership, userId } = guard;
+
+if (!can(Astro, { member: ['read'] })) {
+  return Astro.redirect('/dashboard', 302);
+}
+
+const members = await db()
+  .select({
+    id: member.id,
+    role: member.role,
+    createdAt: member.createdAt,
+    userId: member.userId,
+    name: user.name,
+    email: user.email,
+  })
+  .from(member)
+  .innerJoin(user, eq(user.id, member.userId))
+  .where(eq(member.organizationId, membership.organizationId))
+  .orderBy(member.createdAt);
+
+const invitations = await db()
+  .select({
+    id: invitation.id,
+    email: invitation.email,
+    role: invitation.role,
+    status: invitation.status,
+    expiresAt: invitation.expiresAt,
+    createdAt: invitation.createdAt,
+    inviterName: user.name,
+  })
+  .from(invitation)
+  .leftJoin(user, eq(user.id, invitation.inviterId))
+  .where(eq(invitation.organizationId, membership.organizationId))
+  .orderBy(invitation.createdAt);
+
+const pendingInvitations = invitations.filter(
+  (row) => row.status === 'pending' && row.expiresAt > new Date(),
+);
+
+const inviteResult = Astro.getActionResult(actions.inviteStaff);
+const roleResult = Astro.getActionResult(actions.updateMemberRole);
+const removeResult = Astro.getActionResult(actions.removeMember);
+
+const canInvite = can(Astro, { invitation: ['create'] });
+const canUpdate = can(Astro, { member: ['update'] });
+const canRemove = can(Astro, { member: ['delete'] });
+
+/** Only an owner may create or change another owner. */
+const assignable: OrganizationRole[] = membership.role === 'owner'
+  ? ['owner', 'admin', 'event_manager', 'finance', 'checkin_staff']
+  : ['admin', 'event_manager', 'finance', 'checkin_staff'];
+---
+
+<DashboardLayout title="Staff" description="Manage organizer access" section="staff">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold tracking-tight">Staff</h1>
+    <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+      Who can manage events, money and the door for this organization.
+    </p>
+  </div>
+
+  {
+    [inviteResult, roleResult, removeResult].map((result) =>
+      result?.data ? (
+        <p
+          class:list={[
+            'mb-6 rounded-[var(--radius-card)] border p-3 text-sm',
+            result.data.ok
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+              : 'border-red-200 bg-red-50 text-red-800',
+          ]}
+        >
+          {result.data.ok ? result.data.message : result.data.fieldErrors?._form}
+        </p>
+      ) : null,
+    )
+  }
+
+  {
+    canInvite && (
+      <section class="card mb-6 p-5">
+        <h2 class="text-lg font-semibold">Invite someone</h2>
+        <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+          They receive an email with a link to join. The invitation expires after 48 hours.
+        </p>
+
+        <form method="POST" action={actions.inviteStaff} class="mt-4 grid gap-4 sm:grid-cols-[1fr_auto_auto]">
+          <div>
+            <label class="label" for="invite-email">Email</label>
+            <input id="invite-email" name="email" type="email" class="input" required />
+          </div>
+
+          <div class="sm:w-52">
+            <label class="label" for="invite-role">Role</label>
+            <select id="invite-role" name="role" class="input">
+              {
+                assignable.map((role) => (
+                  <option value={role}>{roleLabels[role]}</option>
+                ))
+              }
+            </select>
+          </div>
+
+          <div class="flex items-end">
+            <button type="submit" class="btn btn-primary btn-sm">Send invitation</button>
+          </div>
+        </form>
+      </section>
+    )
+  }
+
+  <section class="mb-6">
+    <h2 class="mb-3 text-lg font-semibold tracking-tight">Members</h2>
+
+    <div class="card overflow-x-auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Person</th>
+            <th scope="col">Role</th>
+            <th scope="col">Joined</th>
+            {canUpdate && <th scope="col">Change role</th>}
+            {canRemove && <th scope="col" />}
+          </tr>
+        </thead>
+        <tbody>
+          {members.map((row) => (
+            <tr>
+              <td>
+                <p class="font-medium">
+                  {row.name}
+                  {row.userId === userId && (
+                    <span class="ml-2 text-xs text-[var(--color-ink-muted)]">You</span>
+                  )}
+                </p>
+                <p class="text-xs text-[var(--color-ink-muted)]">{row.email}</p>
+              </td>
+              <td>
+                <StatusBadge
+                  label={roleLabels[row.role as OrganizationRole] ?? row.role}
+                  tone={row.role === 'owner' ? 'info' : 'neutral'}
+                />
+              </td>
+              <td class="text-[var(--color-ink-muted)]">{formatRelative(row.createdAt)}</td>
+
+              {
+                canUpdate && (
+                  <td>
+                    <form method="POST" action={actions.updateMemberRole} class="flex items-center gap-2">
+                      <input type="hidden" name="memberId" value={row.id} />
+                      <label class="sr-only" for={`role-${row.id}`}>
+                        Role for {row.name}
+                      </label>
+                      <select id={`role-${row.id}`} name="role" class="input w-44">
+                        {assignable.map((role) => (
+                          <option value={role} selected={role === row.role}>
+                            {roleLabels[role]}
+                          </option>
+                        ))}
+                        {/* Shown only so an existing owner's role is not silently changed. */}
+                        {!assignable.includes(row.role as OrganizationRole) && (
+                          <option value={row.role} selected>
+                            {roleLabels[row.role as OrganizationRole] ?? row.role}
+                          </option>
+                        )}
+                      </select>
+                      <button type="submit" class="btn btn-secondary btn-sm">Save</button>
+                    </form>
+                  </td>
+                )
+              }
+
+              {
+                canRemove && row.userId !== userId && (
+                  <td class="text-right">
+                    <form method="POST" action={actions.removeMember}>
+                      <input type="hidden" name="memberId" value={row.id} />
+                      <button
+                        type="submit"
+                        class="btn btn-ghost btn-sm text-red-700"
+                        aria-label={`Remove ${row.name}`}
+                      >
+                        Remove
+                      </button>
+                    </form>
+                  </td>
+                )
+              }
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {
+    pendingInvitations.length > 0 && (
+      <section>
+        <h2 class="mb-3 text-lg font-semibold tracking-tight">Pending invitations</h2>
+        <div class="card overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Email</th>
+                <th scope="col">Role</th>
+                <th scope="col">Invited</th>
+                <th scope="col">Expires</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingInvitations.map((row) => (
+                <tr>
+                  <td>{row.email}</td>
+                  <td>{roleLabels[row.role as OrganizationRole] ?? row.role}</td>
+                  <td class="text-[var(--color-ink-muted)]">
+                    {row.inviterName ? `${formatRelative(row.createdAt)} by ${row.inviterName}` : formatRelative(row.createdAt)}
+                  </td>
+                  <td class="text-[var(--color-ink-muted)]">{formatDateTime(row.expiresAt, 'UTC')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )
+  }
+</DashboardLayout>

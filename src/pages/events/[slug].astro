@@ -1,0 +1,338 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import EventArtwork from '@/components/events/EventArtwork.astro';
+import StatusBadge from '@/components/ui/StatusBadge.astro';
+import { getPublicEventBySlug } from '@/features/events/service';
+import {
+  EVENT_FORMAT_LABELS,
+  REFUND_POLICY_LABELS,
+  formatLongDate,
+  formatTime,
+} from '@/lib/format';
+import { formatMoney } from '@/lib/money';
+import { site } from '@/config/site';
+
+/**
+ * Public event detail.
+ *
+ * Only published, public events resolve. Private and draft events return a 404
+ * rather than a 403, so this page cannot be used to discover which slugs exist.
+ */
+const { slug } = Astro.params;
+const detail = slug ? await getPublicEventBySlug(slug) : null;
+
+if (!detail) {
+  return Astro.redirect('/404', 302);
+}
+
+const { event, location, access, sessions, ticketTypes } = detail;
+
+const now = new Date();
+const registrationNotOpen = event.registrationOpensAt ? event.registrationOpensAt > now : false;
+const registrationClosed = event.registrationClosesAt ? event.registrationClosesAt < now : false;
+const registrationAllowed = !registrationNotOpen && !registrationClosed;
+
+const sellable = ticketTypes.filter((type) => type.onSale && type.available > 0);
+const cheapest = sellable.length > 0 ? Math.min(...sellable.map((type) => type.priceMinor)) : null;
+const allSoldOut = ticketTypes.length > 0 && sellable.length === 0;
+
+const place =
+  event.format === 'online'
+    ? 'Online event'
+    : location
+      ? [location.venueName, location.city, location.region].filter(Boolean).join(', ')
+      : 'Venue to be announced';
+
+const refundPolicy = REFUND_POLICY_LABELS[event.refundPolicy] ?? 'See the organizer';
+const totalRemaining = sellable.reduce((sum, type) => sum + type.available, 0);
+---
+
+<PublicLayout title={event.title} description={event.summary ?? event.title}>
+  <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+  <section class="relative isolate overflow-hidden" data-parallax-scope>
+    <div class="absolute inset-0 -z-10" aria-hidden="true">
+      <div class="h-full w-full" data-parallax="0.05">
+        <EventArtwork
+          slug={event.slug}
+          title={event.title}
+          coverImageUrl={event.coverImageUrl}
+          variant="hero"
+          class="h-[115%] w-full opacity-80"
+        />
+      </div>
+      <div
+        class="absolute inset-0"
+        style="background: linear-gradient(180deg, color-mix(in srgb, var(--color-canvas) 32%, transparent) 0%, color-mix(in srgb, var(--color-canvas) 72%, transparent) 52%, var(--color-canvas) 100%)"
+      ></div>
+    </div>
+
+    <div class="container-page pb-10 pt-10 sm:pb-14 sm:pt-14" data-hero>
+      <nav class="mb-8 text-xs text-[var(--color-ink-muted)]" aria-label="Breadcrumb">
+        <a href="/events" class="transition-colors hover:text-[var(--color-ink)]">Events</a>
+        <span class="mx-2" aria-hidden="true">/</span>
+        <span>{event.title}</span>
+      </nav>
+
+      <div class="flex flex-wrap items-center gap-2" data-hero-item="fade">
+        <span class="badge border border-white/15 bg-white/5 text-[var(--color-ink)]">
+          {EVENT_FORMAT_LABELS[event.format] ?? event.format}
+        </span>
+        {event.category && <span class="badge badge-outline">{event.category}</span>}
+        {allSoldOut && <span class="badge bg-red-500/90 text-white">Sold out</span>}
+      </div>
+
+      <h1 class="display mt-5 max-w-4xl text-[var(--color-ink)]" data-hero-item="up" style="font-size: clamp(2.75rem, 7vw, 6rem); line-height: 0.9;">
+        {event.title}
+      </h1>
+
+      {
+        event.summary && (
+          <p
+            class="measure mt-5 text-base leading-relaxed text-[var(--color-ink-muted)] sm:text-lg"
+            data-hero-item="up"
+          >
+            {event.summary}
+          </p>
+        )
+      }
+
+      <!-- Meta rail: the three facts a buyer checks before reading anything else. -->
+      <dl
+        class="mt-9 grid gap-px overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-line)] sm:grid-cols-3"
+        data-hero-item="up"
+      >
+        <div class="bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] p-4 backdrop-blur-sm">
+          <dt class="eyebrow-plain">When</dt>
+          <dd class="mt-2 text-sm font-medium leading-snug text-[var(--color-ink)]">
+            {formatLongDate(event.startsAt, event.timezone)}
+          </dd>
+          <dd class="mt-1 text-xs text-[var(--color-ink-muted)]">
+            {formatTime(event.startsAt, event.timezone)} – {formatTime(event.endsAt, event.timezone)} · {event.timezone}
+          </dd>
+        </div>
+
+        <div class="bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] p-4 backdrop-blur-sm">
+          <dt class="eyebrow-plain">Where</dt>
+          <dd class="mt-2 text-sm font-medium leading-snug text-[var(--color-ink)]">{place}</dd>
+          {location?.streetAddress && (
+            <dd class="mt-1 text-xs text-[var(--color-ink-muted)]">
+              {location.streetAddress}
+              {location.postalCode ? `, ${location.postalCode}` : ''}
+            </dd>
+          )}
+        </div>
+
+        <div class="bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] p-4 backdrop-blur-sm">
+          <dt class="eyebrow-plain">Tickets</dt>
+          <dd class="mt-2 text-sm font-medium leading-snug text-[var(--color-ink)]">
+            {cheapest === null ? 'See details' : cheapest === 0 ? 'Free' : `From ${formatMoney(cheapest, ticketTypes[0]?.currency ?? site.defaultCurrency)}`}
+          </dd>
+          <dd class="mt-1 text-xs text-[var(--color-ink-muted)]">
+            {allSoldOut ? 'Sold out' : `${totalRemaining} remaining`}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ── Body ──────────────────────────────────────────────────────────────── -->
+  <div class="container-page mt-4 grid gap-12 pb-20 lg:grid-cols-[1.55fr_1fr] lg:gap-16">
+    <div class="min-w-0">
+      {
+        event.description && (
+          <section data-reveal="up">
+            <h2 class="display display-md text-[var(--color-ink)]">About this event</h2>
+            <div class="measure mt-4 space-y-4 whitespace-pre-line text-[0.9375rem] leading-relaxed text-[var(--color-ink-muted)]">
+              {event.description}
+            </div>
+          </section>
+        )
+      }
+
+      {
+        access?.publicNote && (
+          <section class="mt-10" data-reveal="up">
+            <div class="card-lit p-5">
+              <p class="eyebrow">{access.platform}</p>
+              <p class="mt-3 text-sm leading-relaxed text-[var(--color-ink-muted)]">
+                {access.publicNote}
+              </p>
+              <p class="mt-2 text-xs text-[var(--color-ink-faint)]">
+                Joining instructions are shared with confirmed attendees only.
+              </p>
+            </div>
+          </section>
+        )
+      }
+
+      {
+        sessions.length > 0 && (
+          <section class="mt-12" data-reveal="up">
+            <h2 class="display display-md text-[var(--color-ink)]">Schedule</h2>
+            <ol class="mt-5 space-y-3">
+              {sessions.map((session, index) => (
+                <li class="card p-4">
+                  <div class="flex flex-wrap items-baseline justify-between gap-2">
+                    <div class="flex items-baseline gap-3">
+                      <span class="display text-lg text-[var(--color-brand-accent)]">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <h3 class="font-medium">{session.title}</h3>
+                    </div>
+                    <p class="text-xs tabular-nums text-[var(--color-ink-muted)]">
+                      {formatTime(session.startsAt, event.timezone)} – {formatTime(session.endsAt, event.timezone)}
+                    </p>
+                  </div>
+                  {session.speakerName && (
+                    <p class="mt-1.5 pl-9 text-sm text-[var(--color-ink-muted)]">
+                      {session.speakerName}
+                      {session.room ? ` · ${session.room}` : ''}
+                    </p>
+                  )}
+                  {session.description && (
+                    <p class="mt-2 pl-9 text-sm leading-relaxed text-[var(--color-ink-faint)]">
+                      {session.description}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </section>
+        )
+      }
+
+      {
+        location && (
+          <section class="mt-12" data-reveal="up">
+            <h2 class="display display-md text-[var(--color-ink)]">Venue</h2>
+            <div class="card mt-4 p-5">
+              <p class="font-medium">{location.venueName}</p>
+              <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+                {[location.streetAddress, location.city, location.region, location.postalCode, location.country]
+                  .filter(Boolean)
+                  .join(', ')}
+              </p>
+              {location.directions && (
+                <p class="mt-3 text-sm leading-relaxed text-[var(--color-ink-faint)]">
+                  {location.directions}
+                </p>
+              )}
+            </div>
+          </section>
+        )
+      }
+    </div>
+
+    <!-- ── Tickets ───────────────────────────────────────────────────────── -->
+    <aside class="lg:sticky lg:top-24 lg:self-start" data-reveal="up">
+      <div class="card-lit overflow-hidden">
+        <div class="border-b border-[var(--color-line)] p-5">
+          <p class="eyebrow">Admission</p>
+          <h2 class="display display-md mt-3 text-[var(--color-ink)]">Tickets</h2>
+        </div>
+
+        {
+          ticketTypes.length === 0 ? (
+            <p class="p-5 text-sm text-[var(--color-ink-muted)]">
+              Ticket categories have not been published yet.
+            </p>
+          ) : (
+            <ul class="divide-y divide-[var(--color-line)]">
+              {ticketTypes.map((type) => {
+                const available = type.onSale && type.available > 0;
+
+                return (
+                  <li class="p-5">
+                    <div class="flex items-start justify-between gap-4">
+                      <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <h3 class="text-sm font-semibold">{type.name}</h3>
+                          {available && type.available <= 10 && (
+                            <StatusBadge label={`${type.available} left`} tone="warning" />
+                          )}
+                          {!available && (
+                            <StatusBadge
+                              label={type.available <= 0 ? 'Sold out' : 'Not on sale'}
+                              tone="neutral"
+                            />
+                          )}
+                        </div>
+                        {type.description && (
+                          <p class="mt-1 text-[0.8125rem] leading-relaxed text-[var(--color-ink-muted)]">
+                            {type.description}
+                          </p>
+                        )}
+                        <p class="mt-1.5 text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-faint)]">
+                          Limit {type.minPerOrder}–{type.maxPerOrder} per order
+                        </p>
+                      </div>
+
+                      <p class="shrink-0 text-right text-sm font-semibold tabular-nums">
+                        {type.priceMinor === 0 ? 'Free' : formatMoney(type.priceMinor, type.currency)}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        }
+
+        <div class="border-t border-[var(--color-line)] p-5">
+          {
+            registrationAllowed && !allSoldOut && ticketTypes.length > 0 ? (
+              <a href={`/register/${event.slug}`} class="btn btn-primary w-full">
+                {cheapest === 0 ? 'Register' : 'Register and pay'}
+              </a>
+            ) : (
+              <p class="text-sm text-[var(--color-ink-muted)]">
+                {allSoldOut
+                  ? 'All tickets for this event have been taken.'
+                  : registrationNotOpen
+                    ? 'Registration has not opened yet.'
+                    : registrationClosed
+                      ? 'Registration for this event has closed.'
+                      : 'Registration is not available.'}
+              </p>
+            )
+          }
+
+          <div class="mt-5 space-y-2.5 border-t border-[var(--color-line)] pt-4 text-xs text-[var(--color-ink-muted)]">
+            <div class="flex items-start justify-between gap-3">
+              <span>Refunds</span>
+              <span class="text-right text-[var(--color-ink)]">{refundPolicy}</span>
+            </div>
+            {event.refundableUntil && (
+              <div class="flex items-start justify-between gap-3">
+                <span>Refund window</span>
+                <span class="text-right text-[var(--color-ink)]">
+                  Until {formatLongDate(event.refundableUntil, event.timezone)}
+                </span>
+              </div>
+            )}
+            <div class="flex items-start justify-between gap-3">
+              <span>Registration</span>
+              <span class="text-right text-[var(--color-ink)]">
+                {registrationNotOpen && event.registrationOpensAt
+                  ? `Opens ${formatLongDate(event.registrationOpensAt, event.timezone)}`
+                  : registrationClosed && event.registrationClosesAt
+                    ? `Closed ${formatLongDate(event.registrationClosesAt, event.timezone)}`
+                    : 'Open now'}
+              </span>
+            </div>
+          </div>
+
+          {event.refundPolicyNotes && (
+            <p class="mt-4 text-xs leading-relaxed text-[var(--color-ink-faint)]">
+              {event.refundPolicyNotes}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <p class="mt-4 text-center text-xs text-[var(--color-ink-faint)]">
+        Times shown in {event.timezone}
+      </p>
+    </aside>
+  </div>
+</PublicLayout>

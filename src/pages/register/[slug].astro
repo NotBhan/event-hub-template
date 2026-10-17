@@ -1,0 +1,419 @@
+---
+import { actions } from 'astro:actions';
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import { getPublicEventBySlug } from '@/features/events/service';
+import { formatEventWindow } from '@/lib/format';
+import { formatMoney } from '@/lib/money';
+import { features } from '@/config/features';
+
+/**
+ * Registration.
+ *
+ * The order is created on the server: prices are read from the database and
+ * inventory is reserved before anything else happens. The form only ever submits
+ * which tickets and whose details — never an amount.
+ */
+const { slug } = Astro.params;
+const detail = slug ? await getPublicEventBySlug(slug) : null;
+
+if (!detail) {
+  return Astro.redirect('/404', 302);
+}
+
+const { event, ticketTypes } = detail;
+
+const sellable = ticketTypes.filter((type) => type.onSale && type.available > 0);
+
+if (sellable.length === 0) {
+  return Astro.redirect(`/events/${event.slug}`, 302);
+}
+
+const when = formatEventWindow(event.startsAt, event.endsAt, event.timezone);
+
+const previous = Astro.getActionResult(actions.createRegistration);
+const result = previous?.data;
+
+/**
+ * The action cannot return a Response, so the redirect happens here. This keeps
+ * the whole flow working with JavaScript disabled.
+ */
+if (result?.ok && result.id) {
+  return Astro.redirect(`/checkout/${result.id}`, 303);
+}
+
+const fieldErrors: Record<string, string> = result && !result.ok ? (result.fieldErrors ?? {}) : {};
+const formValues: Record<string, string> = result && !result.ok ? (result.values ?? {}) : {};
+
+const quantityErrors = Object.entries(fieldErrors).filter(([key]) => key.startsWith('quantity__'));
+
+const ticketConfig = sellable.map((type) => ({
+  id: type.id,
+  name: type.name,
+  priceMinor: type.priceMinor,
+  currency: type.currency,
+  available: type.available,
+  min: type.minPerOrder,
+  max: Math.min(type.maxPerOrder, type.available),
+}));
+---
+
+<PublicLayout title={`Register · ${event.title}`}>
+  <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <nav class="mb-6 text-sm" aria-label="Breadcrumb">
+      <a href={`/events/${event.slug}`} class="text-[var(--color-ink-muted)] hover:underline">
+        ← Back to {event.title}
+      </a>
+    </nav>
+
+    <h1 class="display display-lg text-[var(--color-ink)]">Register</h1>
+    <p class="mt-2 text-sm text-[var(--color-ink-muted)]">{when}</p>
+
+    {
+      fieldErrors._form && (
+        <p
+          class="mt-6 rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          data-error-summary
+        >
+          {fieldErrors._form}
+        </p>
+      )
+    }
+
+    <div
+      class="mt-6 hidden rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+      data-error-summary-live
+      role="alert"
+    >
+    </div>
+
+    <form method="POST" action={actions.createRegistration} class="mt-6 space-y-8" data-registration-form>
+      <input type="hidden" name="slug" value={event.slug} />
+
+      <section class="card p-5">
+        <h2 class="text-lg font-semibold">Choose your tickets</h2>
+
+        <div class="mt-4 space-y-4">
+          {
+            sellable.map((type) => (
+              <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--color-line)] pb-4 last:border-b-0 last:pb-0">
+                <div class="min-w-0">
+                  <p class="font-medium">{type.name}</p>
+                  {type.description && (
+                    <p class="mt-0.5 text-sm text-[var(--color-ink-muted)]">{type.description}</p>
+                  )}
+                  <p class="mt-1 text-xs text-[var(--color-ink-muted)]">
+                    {type.available <= 10 ? `Only ${type.available} left · ` : ''}
+                    Limit {type.minPerOrder}–{type.maxPerOrder} per order
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <p class="text-sm font-semibold">
+                    {type.priceMinor === 0 ? 'Free' : formatMoney(type.priceMinor, type.currency)}
+                  </p>
+                  <label class="sr-only" for={`quantity-${type.id}`}>
+                    Number of {type.name} tickets
+                  </label>
+                  <input
+                    id={`quantity-${type.id}`}
+                    name={`quantity__${type.id}`}
+                    type="number"
+                    inputmode="numeric"
+                    /* Zero means "none of this type", so the field itself is always
+                       valid. The per-order minimum is enforced by the server for
+                       whatever quantity the buyer actually chooses. */
+                    min="0"
+                    max={Math.min(type.maxPerOrder, type.available)}
+                    step="1"
+                    value={formValues[`quantity__${type.id}`] ?? '0'}
+                    class="input w-20 text-center"
+                    data-quantity={type.id}
+                  />
+                </div>
+              </div>
+            ))
+          }
+        </div>
+
+        {quantityErrors.length > 0 && (
+          <ul class="mt-3 space-y-1 text-sm text-red-700">
+            {quantityErrors.map(([, message]) => <li>{message}</li>)}
+          </ul>
+        )}
+      </section>
+
+      <section class="card p-5">
+        <h2 class="text-lg font-semibold">Your details</h2>
+        <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+          We send your tickets and any updates to this address.
+        </p>
+
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <div class="sm:col-span-2">
+            <label class="label" for="buyerName">Full name</label>
+            <input
+              id="buyerName"
+              name="buyerName"
+              class="input"
+              required
+              autocomplete="name"
+              value={formValues.buyerName ?? ''}
+              aria-invalid={fieldErrors.buyerName ? 'true' : undefined}
+            />
+            {fieldErrors.buyerName && <p class="help-text text-red-700">{fieldErrors.buyerName}</p>}
+          </div>
+
+          <div>
+            <label class="label" for="buyerEmail">Email</label>
+            <input
+              id="buyerEmail"
+              name="buyerEmail"
+              type="email"
+              class="input"
+              required
+              autocomplete="email"
+              value={formValues.buyerEmail ?? ''}
+              aria-invalid={fieldErrors.buyerEmail ? 'true' : undefined}
+            />
+            {fieldErrors.buyerEmail && <p class="help-text text-red-700">{fieldErrors.buyerEmail}</p>}
+          </div>
+
+          <div>
+            <label class="label" for="buyerPhone">Phone <span class="font-normal">(optional)</span></label>
+            <input
+              id="buyerPhone"
+              name="buyerPhone"
+              type="tel"
+              class="input"
+              autocomplete="tel"
+              value={formValues.buyerPhone ?? ''}
+              aria-invalid={fieldErrors.buyerPhone ? 'true' : undefined}
+            />
+            {fieldErrors.buyerPhone && <p class="help-text text-red-700">{fieldErrors.buyerPhone}</p>}
+          </div>
+        </div>
+      </section>
+
+      <section class="card p-5" data-attendee-section hidden>
+        <h2 class="text-lg font-semibold">Ticket holders</h2>
+        <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+          Each ticket is issued to a named attendee. You can use the same details for yourself.
+        </p>
+
+        <div class="mt-5 space-y-6" data-attendee-container></div>
+      </section>
+
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <p class="text-xs text-[var(--color-ink-muted)]">
+          {features.paidTicketing
+            ? 'Paid tickets are confirmed once payment succeeds.'
+            : 'Registration is free of charge.'}
+        </p>
+        <button type="submit" class="btn btn-primary" data-submit-button>
+          Continue
+        </button>
+      </div>
+    </form>
+
+    <script
+      type="application/json"
+      id="ticket-config"
+      set:html={JSON.stringify(ticketConfig)}
+    />
+  </div>
+</PublicLayout>
+
+<script>
+  import { actions } from 'astro:actions';
+
+  /**
+   * Attendee blocks.
+   *
+   * Renders one block of details per ticket selected. The server re-derives the
+   * ticket count from the submitted blocks and checks it against the declared
+   * quantity, so this script is purely a convenience and never a source of truth.
+   */
+  interface TicketConfig {
+    id: string;
+    name: string;
+    priceMinor: number;
+    currency: string;
+    available: number;
+    min: number;
+    max: number;
+  }
+
+  const form = document.querySelector<HTMLFormElement>('[data-registration-form]');
+  const configElement = document.getElementById('ticket-config');
+
+  if (form && configElement?.textContent) {
+    const config = JSON.parse(configElement.textContent) as TicketConfig[];
+    const container = form.querySelector<HTMLElement>('[data-attendee-container]');
+    const section = form.querySelector<HTMLElement>('[data-attendee-section]');
+
+    const formatMoney = (minor: number, currency: string) =>
+      minor === 0
+        ? 'Free'
+        : new Intl.NumberFormat('en-IN', { style: 'currency', currency }).format(minor / 100);
+
+    const clampQuantity = (ticket: TicketConfig): number => {
+      const input = form.querySelector<HTMLInputElement>(`[data-quantity="${ticket.id}"]`);
+      if (!input) return 0;
+      const value = Number(input.value) || 0;
+      return Math.min(Math.max(value, 0), ticket.max);
+    };
+
+    /**
+     * Rebuilds the attendee blocks.
+     *
+     * Guarded by a signature of the current quantities. Without that guard, a
+     * `change` event on a quantity field (which fires on blur, e.g. when the buyer
+     * tabs into an attendee field) would tear down and rebuild the blocks mid-edit
+     * and lose what had already been typed.
+     */
+    let renderedSignature = '';
+
+    const renderAttendees = () => {
+      if (!container || !section) return;
+
+      const quantities = config.map((ticket) => clampQuantity(ticket));
+      const signature = quantities.join(',');
+
+      if (signature === renderedSignature) return;
+      renderedSignature = signature;
+
+      // Remember typed values so changing a quantity does not wipe the form.
+      const existing = new Map<string, { name: string; email: string; phone: string }>();
+      for (const input of container.querySelectorAll<HTMLInputElement>('input[data-field]')) {
+        const group = input.dataset.group;
+        if (!group) continue;
+        const entry = existing.get(group) ?? { name: '', email: '', phone: '' };
+        entry[input.dataset.field as 'name' | 'email' | 'phone'] = input.value;
+        existing.set(group, entry);
+      }
+
+      container.innerHTML = '';
+      let totalBlocks = 0;
+
+      for (const [ticketIndex, ticket] of config.entries()) {
+        const quantity = quantities[ticketIndex] ?? 0;
+
+        for (let index = 0; index < quantity; index += 1) {
+          totalBlocks += 1;
+          const key = `${ticket.id}__${index}`;
+          const remembered = existing.get(key) ?? { name: '', email: '', phone: '' };
+
+          const block = document.createElement('fieldset');
+          block.className = 'rounded-[var(--radius-card)] border border-[var(--color-line)] p-4';
+          block.innerHTML = `
+            <legend class="px-1 text-sm font-semibold">
+              ${escapeHtml(ticket.name)} · ticket ${index + 1}
+              <span class="ml-1 font-normal text-[var(--color-ink-muted)]">${formatMoney(ticket.priceMinor, ticket.currency)}</span>
+            </legend>
+            <div class="mt-2 grid gap-3 sm:grid-cols-2">
+              <div class="sm:col-span-2">
+                <label class="label" for="name-${key}">Attendee name</label>
+                <input id="name-${key}" name="attendee_name__${key}" class="input" required data-field="name" data-group="${key}" value="${escapeHtml(remembered.name)}" autocomplete="off" />
+              </div>
+              <div>
+                <label class="label" for="email-${key}">Attendee email</label>
+                <input id="email-${key}" name="attendee_email__${key}" type="email" class="input" required data-field="email" data-group="${key}" value="${escapeHtml(remembered.email)}" autocomplete="off" />
+              </div>
+              <div>
+                <label class="label" for="phone-${key}">Phone <span class="font-normal">(optional)</span></label>
+                <input id="phone-${key}" name="attendee_phone__${key}" type="tel" class="input" data-field="phone" data-group="${key}" value="${escapeHtml(remembered.phone)}" autocomplete="off" />
+              </div>
+            </div>
+          `;
+          container.appendChild(block);
+        }
+      }
+
+      section.hidden = totalBlocks === 0;
+    };
+
+    const escapeHtml = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    for (const input of form.querySelectorAll<HTMLInputElement>('[data-quantity]')) {
+      input.addEventListener('input', renderAttendees);
+      input.addEventListener('change', renderAttendees);
+    }
+
+    renderAttendees();
+
+    /**
+     * Submitting.
+     *
+     * With JavaScript, Astro hands the action result straight back to this script
+     * and never reloads the page — which means the redirect written in the
+     * frontmatter does not run. So the redirect is performed here instead, and the
+     * frontmatter path stays for the no-JavaScript case, where the server does the
+     * navigation.
+     */
+    const summary = document.querySelector<HTMLElement>('[data-error-summary-live]');
+
+    const showErrors = (errors: Record<string, string>) => {
+      if (!summary) return;
+
+      const messages = Object.values(errors).filter(Boolean);
+      summary.innerHTML = '';
+
+      if (messages.length === 0) {
+        summary.textContent = 'Please check the form and try again.';
+      } else if (messages.length === 1) {
+        summary.textContent = messages[0] ?? '';
+      } else {
+        const list = document.createElement('ul');
+        list.className = 'list-disc space-y-1 pl-5';
+
+        for (const message of messages) {
+          const item = document.createElement('li');
+          item.textContent = message;
+          list.appendChild(item);
+        }
+
+        summary.appendChild(list);
+      }
+
+      summary.classList.remove('hidden');
+      summary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      summary?.classList.add('hidden');
+
+      const button = form.querySelector<HTMLButtonElement>('[data-submit-button]');
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Reserving your tickets…';
+      }
+
+      try {
+        // Same action the plain form posts to, called through the client runtime.
+        const result = await actions.createRegistration(new FormData(form));
+
+        if (result.data?.ok && result.data.id) {
+          window.location.assign(`/checkout/${result.data.id}`);
+          return;
+        }
+
+        showErrors(result.data?.fieldErrors ?? {});
+      } catch {
+        showErrors({ _form: 'We could not reach the server. Please check your connection and try again.' });
+      }
+
+      if (button) {
+        button.disabled = false;
+        button.textContent = 'Continue';
+      }
+    });
+  }
+</script>

@@ -1,0 +1,57 @@
+{
+  "name": "event-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Reusable event management platform: Astro SSR, TypeScript, PostgreSQL, Better Auth, Drizzle ORM",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "start": "node ./dist/server/entry.mjs",
+    "check": "astro check",
+    "typecheck": "astro check",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "seed": "tsx scripts/seed-demo.ts",
+    "provision": "tsx scripts/provision-client.ts",
+    "worker:expire-orders": "tsx workers/expire-orders.ts",
+    "worker:process-outbox": "tsx workers/process-outbox.ts",
+    "worker:reconcile-payments": "tsx workers/reconcile-payments.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.8",
+    "@tailwindcss/vite": "^4.3.3",
+    "@zxing/browser": "^0.2.1",
+    "animejs": "^4.5.0",
+    "astro": "^7.4.0",
+    "better-auth": "^1.7.10",
+    "drizzle-orm": "^0.45.4",
+    "gsap": "^3.15.0",
+    "nodemailer": "^10.1.2",
+    "postgres": "^3.4.9",
+    "qrcode": "^1.5.4",
+    "razorpay": "^2.9.8",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.20.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^24.0.0",
+    "@types/nodemailer": "^7.0.0",
+    "@types/qrcode": "^1.5.6",
+    "drizzle-kit": "^0.31.11",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

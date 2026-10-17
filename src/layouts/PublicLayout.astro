@@ -1,0 +1,40 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import SiteHeader from '@/components/site/SiteHeader.astro';
+import SiteFooter from '@/components/site/SiteFooter.astro';
+import { getOrganizationSettings, getPrimaryOrganizationId } from '@/features/events/service';
+
+interface Props {
+  title?: string;
+  description?: string;
+  noIndex?: boolean;
+}
+
+const { title, description, noIndex = false } = Astro.props;
+
+/**
+ * Public site chrome.
+ *
+ * Branding is read from the database so a client can change their name and colour
+ * without a code change. A missing settings row falls back to the build-time
+ * defaults in `src/config/site.ts`.
+ *
+ * The public site is dark by default; the organizer surface opts into `light`.
+ */
+let branding = null;
+try {
+  const organizationId = await getPrimaryOrganizationId();
+  if (organizationId) {
+    branding = await getOrganizationSettings(organizationId);
+  }
+} catch {
+  // A database hiccup must not stop the public site from rendering.
+  branding = null;
+}
+---
+
+<BaseLayout title={title} description={description} noIndex={noIndex} branding={branding} theme="dark">
+  <SiteHeader slot="header" branding={branding} />
+  <slot />
+  <SiteFooter slot="footer" branding={branding} />
+</BaseLayout>

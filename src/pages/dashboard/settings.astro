@@ -1,0 +1,211 @@
+---
+import { actions } from 'astro:actions';
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import { organizerGuard } from '@/lib/permissions/page-guards';
+import { can } from '@/lib/permissions/guards';
+import { getOrganizationSettings } from '@/features/events/service';
+import { COMMON_TIMEZONES } from '@/lib/timezone';
+import { site } from '@/config/site';
+import { features } from '@/config/features';
+import { serverEnv } from '@/lib/security/env';
+
+/**
+ * Organization settings.
+ *
+ * Branding is stored in the database and applied at runtime, so a client can
+ * change their name and colour without a code change or a redeploy.
+ *
+ * Deployment secrets are shown read-only and never submitted through this form:
+ * payment keys, the webhook secret and the ticket signing secret belong in the
+ * server environment, not in a web form.
+ */
+const guard = organizerGuard(Astro);
+if (!guard.ok) return Astro.redirect(guard.redirectTo ?? '/dashboard/no-access', 302);
+
+const { membership } = guard;
+
+if (!can(Astro, { settings: ['read'] })) {
+  return Astro.redirect('/dashboard', 302);
+}
+
+const settings = await getOrganizationSettings(membership.organizationId);
+const canUpdate = can(Astro, { settings: ['update'] });
+
+const env = serverEnv();
+
+const result = Astro.getActionResult(actions.updateSettings);
+
+/** Deployment facts worth surfacing, without exposing any secret value. */
+const deployment = [
+  { label: 'Payment provider', value: env.PAYMENT_PROVIDER === 'simulated' ? 'Simulated (demo only)' : 'Razorpay' },
+  { label: 'Email transport', value: env.EMAIL_PROVIDER === 'console' ? 'Console log (development)' : 'SMTP' },
+  { label: 'Public site URL', value: env.PUBLIC_SITE_URL },
+  { label: 'Order reservation window', value: `${env.ORDER_RESERVATION_MINUTES} minutes` },
+  { label: 'Guest checkout', value: features.guestCheckout ? 'Allowed' : 'Disabled' },
+  { label: 'QR check-in', value: features.qrCheckIn ? 'Enabled' : 'Disabled' },
+];
+---
+
+<DashboardLayout title="Settings" description="Organization settings" section="settings">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold tracking-tight">Settings</h1>
+    <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+      Branding and defaults for this installation.
+    </p>
+  </div>
+
+  {
+    result?.data && (
+      <p
+        class:list={[
+          'mb-6 rounded-[var(--radius-card)] border p-3 text-sm',
+          result.data.ok
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+            : 'border-red-200 bg-red-50 text-red-800',
+        ]}
+      >
+        {result.data.ok ? result.data.message : result.data.fieldErrors?._form}
+      </p>
+    )
+  }
+
+  {
+    !canUpdate && (
+      <p class="mb-6 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        Your role can view these settings but not change them.
+      </p>
+    )
+  }
+
+  <section class="card mb-6 p-5">
+    <h2 class="text-lg font-semibold">Branding</h2>
+
+    <form method="POST" action={actions.updateSettings} class="mt-4 grid gap-4 sm:grid-cols-2">
+      <div class="sm:col-span-2">
+        <label class="label" for="brandName">Organization name</label>
+        <input
+          id="brandName"
+          name="brandName"
+          class="input"
+          required
+          maxlength="120"
+          value={settings?.brandName ?? site.name}
+          disabled={!canUpdate}
+        />
+      </div>
+
+      <div>
+        <label class="label" for="logoUrl">Logo URL</label>
+        <input
+          id="logoUrl"
+          name="logoUrl"
+          type="url"
+          class="input"
+          placeholder="https://…"
+          value={settings?.logoUrl ?? ''}
+          disabled={!canUpdate}
+        />
+      </div>
+
+      <div>
+        <label class="label" for="primaryColor">Primary colour</label>
+        <input
+          id="primaryColor"
+          name="primaryColor"
+          class="input"
+          placeholder="#4f46e5"
+          pattern="^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+          value={settings?.primaryColor ?? site.colors.primary}
+          disabled={!canUpdate}
+        />
+      </div>
+
+      <div>
+        <label class="label" for="supportEmail">Support email</label>
+        <input
+          id="supportEmail"
+          name="supportEmail"
+          type="email"
+          class="input"
+          value={settings?.supportEmail ?? ''}
+          disabled={!canUpdate}
+        />
+      </div>
+
+      <div>
+        <label class="label" for="supportPhone">Support phone</label>
+        <input
+          id="supportPhone"
+          name="supportPhone"
+          class="input"
+          maxlength="32"
+          value={settings?.supportPhone ?? ''}
+          disabled={!canUpdate}
+        />
+      </div>
+
+      <div>
+        <label class="label" for="defaultCurrency">Default currency</label>
+        <input
+          id="defaultCurrency"
+          name="defaultCurrency"
+          class="input uppercase"
+          maxlength="3"
+          minlength="3"
+          required
+          value={settings?.defaultCurrency ?? site.defaultCurrency}
+          disabled={!canUpdate}
+        />
+        <p class="help-text">Three-letter ISO code. Used for new ticket types.</p>
+      </div>
+
+      <div>
+        <label class="label" for="defaultTimezone">Default timezone</label>
+        <select id="defaultTimezone" name="defaultTimezone" class="input" disabled={!canUpdate}>
+          {
+            COMMON_TIMEZONES.map((zone) => (
+              <option value={zone} selected={(settings?.defaultTimezone ?? site.defaultTimezone) === zone}>
+                {zone}
+              </option>
+            ))
+          }
+        </select>
+        <p class="help-text">New events default to this timezone.</p>
+      </div>
+
+      {
+        canUpdate && (
+          <div class="sm:col-span-2">
+            <button type="submit" class="btn btn-primary btn-sm">Save settings</button>
+          </div>
+        )
+      }
+    </form>
+  </section>
+
+  <section class="card p-5">
+    <h2 class="text-lg font-semibold">Deployment</h2>
+    <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+      Configured through environment variables. Secrets are never shown here, and are not editable
+      from the browser.
+    </p>
+
+    <dl class="mt-4 grid gap-3 sm:grid-cols-2">
+      {
+        deployment.map((item) => (
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
+              {item.label}
+            </dt>
+            <dd class="mt-0.5 text-sm">{item.value}</dd>
+          </div>
+        ))
+      }
+    </dl>
+
+    <p class="mt-4 text-xs text-[var(--color-ink-muted)]">
+      Payment credentials, the webhook secret and the ticket signing secret live only in the server
+      environment, so that a database backup alone can never be used to forge a ticket or move money.
+    </p>
+  </section>
+</DashboardLayout>

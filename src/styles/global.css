@@ -1,0 +1,552 @@
+@import './fonts.css';
+@import 'tailwindcss';
+
+/*
+  ─────────────────────────────────────────────────────────────────────────────
+  Design tokens
+  ─────────────────────────────────────────────────────────────────────────────
+
+  Two surfaces, one system:
+
+    • Public site — dark, editorial, immersive. Oversized condensed display type
+      on near-black, with indigo, electric blue and a lime accent used sparingly.
+    • Organizer surface — light, dense, quiet. The same tokens resolve to a
+      neutral palette so tables, refunds and the scanner stay legible.
+
+  The split is per-subtree: `[data-theme='light']` overrides the variables on the
+  wrapper, and everything inside inherits them. Utilities always reference
+  `var(--color-*)`, so no component needs to know which theme it is in.
+
+  Brand tokens remain configurable per client. Runtime overrides from
+  `organization_settings` are written onto `:root` by the root layout, so a client
+  changes their accent colour without a rebuild.
+*/
+@theme {
+  /* Palette — dark editorial default */
+  --color-canvas: #080b13;
+  --color-surface: #0e1421;
+  --color-surface-muted: #121a2b;
+  --color-elevated: #162034;
+  --color-line: rgba(255, 255, 255, 0.09);
+  --color-line-strong: rgba(255, 255, 255, 0.16);
+
+  --color-ink: #f4f5f7;
+  --color-ink-muted: #98a2b3;
+  --color-ink-faint: #667085;
+
+  --color-brand: var(--brand-primary, #6366f1);
+  --color-brand-foreground: #ffffff;
+  --color-brand-accent: #0ea5e9;
+  --color-neon: #a3e635;
+
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+
+  /* Type */
+  --font-display: 'Bebas Neue', 'Oswald', 'Arial Narrow', Impact, sans-serif;
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+
+  /* Geometry */
+  --radius-card: 1rem;
+  --radius-pill: 999px;
+
+  /* Motion — mirrored in src/lib/motion/tokens.ts */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --duration-fast: 160ms;
+  --duration-base: 320ms;
+  --duration-slow: 720ms;
+}
+
+/* ── Light surface (organizer dashboard, checkout, scanner) ─────────────────── */
+[data-theme='light'] {
+  color-scheme: light;
+
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f2f4f7;
+  --color-elevated: #ffffff;
+  --color-line: #e4e7ec;
+  --color-line-strong: #d0d5dd;
+
+  --color-ink: #101828;
+  --color-ink-muted: #667085;
+  --color-ink-faint: #98a2b3;
+
+  --color-brand: var(--brand-primary, #4f46e5);
+  --color-brand-foreground: #ffffff;
+  --color-brand-accent: #0ea5e9;
+  /* Lime is unreadable on white, so the accent shifts darker in this context. */
+  --color-neon: #4d7c0f;
+
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────────── */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  [data-theme='light'] {
+    color-scheme: light;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  /* Images never overflow their container, even before they load. */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* ── Typography utilities ───────────────────────────────────────────────────── */
+@layer components {
+  /*
+    The display face is condensed and uppercase by design. It is only used for
+    headlines, never for body copy or UI labels.
+  */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-transform: uppercase;
+    line-height: 0.86;
+    letter-spacing: 0.005em;
+    font-feature-settings: normal;
+  }
+
+  /* Fluid sizes: readable on a phone, dramatic on a wide screen. */
+  .display-hero {
+    font-size: clamp(3.25rem, 11vw, 9.5rem);
+  }
+
+  .display-xl {
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    line-height: 0.9;
+  }
+
+  .display-lg {
+    font-size: clamp(2rem, 4.5vw, 3.25rem);
+    line-height: 0.92;
+  }
+
+  .display-md {
+    font-size: clamp(1.5rem, 2.6vw, 2.125rem);
+    line-height: 0.95;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  .eyebrow::before {
+    content: '';
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 999px;
+    background-color: var(--color-neon);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--color-neon) 70%, transparent);
+  }
+
+  .eyebrow-plain {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-ink-faint);
+  }
+
+  /* Constrained measure for long-form copy. */
+  .measure {
+    max-width: 62ch;
+  }
+
+  .measure-tight {
+    max-width: 46ch;
+  }
+}
+
+/* ── Surfaces and controls ──────────────────────────────────────────────────── */
+@layer components {
+  .container-page {
+    width: 100%;
+    max-width: 78rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  @media (min-width: 640px) {
+    .container-page {
+      padding-inline: 2rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container-page {
+      padding-inline: 2.5rem;
+    }
+  }
+
+  .card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+
+  .card-elevated {
+    background-color: var(--color-elevated);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+
+  /* A hairline of light along the top edge, used on feature surfaces. */
+  .card-lit {
+    position: relative;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+
+  .card-lit::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 1px;
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--color-brand-accent) 60%, transparent),
+      transparent
+    );
+  }
+
+  /* ── Buttons ─────────────────────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-pill);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0.8125rem 1.25rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    text-decoration: none;
+    transition:
+      background-color var(--duration-fast) var(--ease-out-quart),
+      border-color var(--duration-fast) var(--ease-out-quart),
+      color var(--duration-fast) var(--ease-out-quart),
+      transform var(--duration-fast) var(--ease-out-quart),
+      opacity var(--duration-fast) var(--ease-out-quart);
+  }
+
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .btn:disabled,
+  .btn[aria-disabled='true'] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background-color: var(--color-brand);
+    color: var(--color-brand-foreground);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-brand) 86%, white);
+  }
+
+  .btn-accent {
+    background-color: var(--color-neon);
+    color: #0b0f1a;
+  }
+
+  .btn-accent:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-neon) 88%, white);
+  }
+
+  .btn-secondary {
+    background-color: transparent;
+    color: var(--color-ink);
+    border-color: var(--color-line-strong);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--color-ink-muted);
+    background-color: color-mix(in srgb, var(--color-ink) 6%, transparent);
+  }
+
+  .btn-danger {
+    background-color: var(--color-danger);
+    color: #fff;
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-danger) 84%, black);
+  }
+
+  .btn-ghost {
+    background-color: transparent;
+    color: var(--color-ink-muted);
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    color: var(--color-ink);
+    background-color: color-mix(in srgb, var(--color-ink) 6%, transparent);
+  }
+
+  .btn-sm {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+  }
+
+  .btn-lg {
+    padding: 1rem 1.75rem;
+    font-size: 0.9375rem;
+  }
+
+  /* ── Form controls ───────────────────────────────────────────────────────── */
+  .input {
+    width: 100%;
+    border-radius: 0.625rem;
+    border: 1px solid var(--color-line-strong);
+    background-color: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    color: var(--color-ink);
+    padding: 0.6875rem 0.8125rem;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    transition:
+      border-color var(--duration-fast) var(--ease-out-quart),
+      background-color var(--duration-fast) var(--ease-out-quart);
+  }
+
+  .input::placeholder {
+    color: var(--color-ink-faint);
+  }
+
+  .input:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--color-ink-muted) 55%, transparent);
+  }
+
+  .input:focus {
+    border-color: var(--color-brand-accent);
+    background-color: var(--color-surface);
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-accent) 22%, transparent);
+  }
+
+  .input:disabled {
+    background-color: var(--color-surface-muted);
+    color: var(--color-ink-faint);
+    cursor: not-allowed;
+  }
+
+  /* Native selects need their own arrow to look right on both themes. */
+  select.input {
+    appearance: none;
+    padding-right: 2.25rem;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position:
+      calc(100% - 1.125rem) calc(50% + 1px),
+      calc(100% - 0.8125rem) calc(50% + 1px);
+    background-size:
+      5px 5px,
+      5px 5px;
+    background-repeat: no-repeat;
+  }
+
+  .label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--color-ink);
+    margin-bottom: 0.375rem;
+  }
+
+  .help-text {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+    margin-top: 0.3125rem;
+  }
+
+  /* ── Badges ──────────────────────────────────────────────────────────────── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+    border-radius: var(--radius-pill);
+    padding: 0.1875rem 0.5rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .badge-outline {
+    border-color: var(--color-line-strong);
+    color: var(--color-ink-muted);
+  }
+
+  /* ── Tables ──────────────────────────────────────────────────────────────── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .data-table th {
+    text-align: left;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--color-ink-muted);
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--color-line);
+    white-space: nowrap;
+  }
+
+  .data-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--color-line);
+    vertical-align: middle;
+  }
+
+  .data-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .data-table tbody tr {
+    transition: background-color var(--duration-fast) var(--ease-out-quart);
+  }
+
+  .data-table tbody tr:hover {
+    background-color: color-mix(in srgb, var(--color-ink) 4%, transparent);
+  }
+}
+
+/* ── Decorative layers ──────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Fine grain over dark surfaces; it stops large flat areas looking digital. */
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .text-gradient {
+    background: linear-gradient(
+      100deg,
+      var(--color-ink) 10%,
+      var(--color-brand-accent) 55%,
+      var(--color-brand) 95%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Hairline dividers that read on both themes. */
+  .rule {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-line-strong), transparent);
+  }
+}
+
+/*
+  ─────────────────────────────────────────────────────────────────────────────
+  Motion initial states
+  ─────────────────────────────────────────────────────────────────────────────
+
+  Only the hero is hidden before its animation runs, because it is above the
+  fold and would otherwise flash. The marker is set by an inline bootstrap in
+  `<head>` that checks `prefers-reduced-motion` first, so with motion reduced or
+  JavaScript unavailable these rules never apply and the content is visible.
+*/
+html[data-motion='on'] [data-hero-item] {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/*
+  ─────────────────────────────────────────────────────────────────────────────
+  Motion safety
+  ─────────────────────────────────────────────────────────────────────────────
+
+  Animation is an enhancement, never a requirement. If motion is reduced, every
+  element that would have animated starts in its final state — the reveal
+  utilities below set the hidden state only when animation is actually running,
+  which is what the motion library checks before initialising.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

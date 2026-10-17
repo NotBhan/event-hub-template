@@ -1,0 +1,124 @@
+---
+import EventArtwork from './EventArtwork.astro';
+import { formatCompactWindow, EVENT_FORMAT_LABELS } from '@/lib/format';
+import { formatMoney } from '@/lib/money';
+import { site } from '@/config/site';
+
+interface Props {
+  event: {
+    slug: string;
+    title: string;
+    summary: string | null;
+    format: string;
+    timezone: string;
+    startsAt: Date;
+    category?: string | null;
+    coverImageUrl?: string | null;
+  };
+  venueName?: string | null;
+  city?: string | null;
+  remainingTickets?: number | null;
+  cheapestPriceMinor?: number | null;
+  currency?: string | null;
+}
+
+/**
+ * Event card.
+ *
+ * The whole card is one link, so the tap target is the card rather than the
+ * title. Hover motion is CSS-only — a transform on the artwork and the arrow —
+ * which keeps it off the main thread and out of the animation engine's way.
+ */
+const {
+  event,
+  venueName,
+  city,
+  remainingTickets = null,
+  cheapestPriceMinor = null,
+  currency = null,
+} = Astro.props;
+
+const when = formatCompactWindow(event.startsAt, event.timezone);
+
+const priceLabel =
+  cheapestPriceMinor === null
+    ? null
+    : cheapestPriceMinor === 0
+      ? 'Free'
+      : `From ${formatMoney(cheapestPriceMinor, currency ?? site.defaultCurrency)}`;
+
+const place =
+  event.format === 'online'
+    ? 'Online'
+    : [venueName, city].filter(Boolean).join(', ') || 'Venue to be announced';
+
+const soldOut = remainingTickets !== null && remainingTickets <= 0;
+const lowStock = !soldOut && remainingTickets !== null && remainingTickets <= 10;
+---
+
+<article class="group relative">
+  <a
+    href={`/events/${event.slug}`}
+    class="block overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-surface)] transition-colors duration-300 hover:border-[var(--color-line-strong)] focus-visible:outline-none"
+  >
+    <div class="relative aspect-[16/10] overflow-hidden">
+      <EventArtwork
+        slug={event.slug}
+        title={event.title}
+        category={event.category}
+        coverImageUrl={event.coverImageUrl}
+        variant="card"
+        class="h-full w-full"
+      />
+
+      <div class="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent"></div>
+
+      <div class="absolute bottom-3 left-4 flex flex-wrap items-center gap-1.5">
+        <span
+          class="badge border border-white/20 bg-black/40 text-white backdrop-blur-sm"
+        >
+          {EVENT_FORMAT_LABELS[event.format] ?? event.format}
+        </span>
+        {soldOut && <span class="badge bg-red-500/90 text-white">Sold out</span>}
+        {lowStock && (
+          <span class="badge bg-[var(--color-neon)] text-[#0b0f1a]">{remainingTickets} left</span>
+        )}
+      </div>
+    </div>
+
+    <div class="p-5">
+      <p class="text-xs font-medium tracking-wide text-[var(--color-ink-muted)]">{when}</p>
+
+      <h3
+        class="display mt-2 text-[1.375rem] leading-none text-[var(--color-ink)] transition-colors duration-300 group-hover:text-[var(--color-brand-accent)] sm:text-[1.5rem]"
+      >
+        {event.title}
+      </h3>
+
+      <p class="mt-2.5 text-[0.8125rem] text-[var(--color-ink-muted)]">{place}</p>
+
+      {
+        event.summary && (
+          <p class="mt-3 line-clamp-2 text-[0.8125rem] leading-relaxed text-[var(--color-ink-faint)]">
+            {event.summary}
+          </p>
+        )
+      }
+
+      <div class="mt-5 flex items-center justify-between gap-3 border-t border-[var(--color-line)] pt-4">
+        <span class="text-sm font-semibold tracking-tight text-[var(--color-ink)]">
+          {priceLabel ?? 'See details'}
+        </span>
+
+        <span
+          class="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-line-strong)] text-[var(--color-ink-muted)] transition-all duration-300 group-hover:border-[var(--color-brand-accent)] group-hover:bg-[var(--color-brand-accent)] group-hover:text-[#08111f]"
+          aria-hidden="true"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+      </div>
+    </div>
+  </a>
+</article>

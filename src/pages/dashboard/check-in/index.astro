@@ -1,0 +1,63 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import { organizerGuard } from '@/lib/permissions/page-guards';
+import { can } from '@/lib/permissions/guards';
+import { listScannableEvents } from '@/features/events/service';
+import { formatCompactWindow, EVENT_STATUS_LABELS } from '@/lib/format';
+import StatusBadge from '@/components/ui/StatusBadge.astro';
+
+/**
+ * Scanner picker.
+ *
+ * Staff choose the event they are working at the door, which is what scopes every
+ * subsequent scan to that event.
+ */
+const guard = organizerGuard(Astro);
+if (!guard.ok) return Astro.redirect(guard.redirectTo ?? '/dashboard/no-access', 302);
+
+if (!can(Astro, { check_in: ['perform'] })) {
+  return Astro.redirect('/dashboard', 302);
+}
+
+const { membership } = guard;
+const events = await listScannableEvents(membership.organizationId);
+---
+
+<DashboardLayout title="Check-in" description="Scan tickets at the door" section="check-in">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold tracking-tight">Check-in</h1>
+    <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+      Choose the event you are admitting for. Scans are only accepted for that event.
+    </p>
+  </div>
+
+  {
+    events.length === 0 ? (
+      <p class="card p-8 text-center text-sm text-[var(--color-ink-muted)]">
+        No events are open for check-in. An event must be published before tickets can be scanned.
+      </p>
+    ) : (
+      <ul class="grid gap-3 sm:grid-cols-2">
+        {events.map((event) => (
+          <li class="card p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="font-semibold">{event.title}</p>
+                <p class="mt-1 text-sm text-[var(--color-ink-muted)]">
+                  {formatCompactWindow(event.startsAt, event.timezone)}
+                </p>
+              </div>
+              <StatusBadge
+                label={EVENT_STATUS_LABELS[event.status] ?? event.status}
+                status={event.status}
+              />
+            </div>
+            <a href={`/dashboard/check-in/${event.id}`} class="btn btn-primary btn-sm mt-4">
+              Open scanner
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</DashboardLayout>

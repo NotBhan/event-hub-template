@@ -1,0 +1,265 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import EventCard from '@/components/events/EventCard.astro';
+import EventArtwork from '@/components/events/EventArtwork.astro';
+import { listPublicCategories, listPublicEvents } from '@/features/events/service';
+import { site } from '@/config/site';
+
+/**
+ * Homepage.
+ *
+ * Only published, public, not-yet-finished events are queried — the same service
+ * the listing page uses. Nothing on this page is hardcoded sample data.
+ */
+const [{ rows: featured, total }, categories] = await Promise.all([
+  listPublicEvents({ upcomingOnly: true, limit: 3 }),
+  listPublicCategories(),
+]);
+
+/** The hero artwork is seeded from the event the page is actually promoting. */
+const lead = featured[0]?.event ?? null;
+
+const disciplines =
+  categories.length > 0
+    ? categories.slice(0, 5)
+    : ['Conferences', 'Workshops', 'Meetups', 'Festivals'];
+
+const totalTickets = featured.reduce((sum, row) => sum + (row.remainingTickets ?? 0), 0);
+---
+
+<PublicLayout title={undefined}>
+  <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+  <section class="relative isolate overflow-hidden" data-parallax-scope>
+    <!-- Immersive backdrop, masked into the page rather than ending abruptly. -->
+    <div class="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+      <div class="absolute inset-y-0 right-0 w-full lg:w-[68%]" data-parallax="0.06">
+        <EventArtwork
+          slug={lead?.slug ?? 'event-hub-hero'}
+          category={null}
+          variant="hero"
+          class="h-[120%] w-full opacity-70"
+        />
+      </div>
+
+      <!-- Left-to-right veil so the headline always has contrast behind it. -->
+      <div
+        class="absolute inset-0"
+        style="background: linear-gradient(90deg, var(--color-canvas) 0%, color-mix(in srgb, var(--color-canvas) 88%, transparent) 42%, transparent 82%)"
+      ></div>
+
+      <!-- Bottom fade into the page background. -->
+      <div
+        class="absolute inset-x-0 bottom-0 h-52"
+        style="background: linear-gradient(180deg, transparent, var(--color-canvas))"
+      ></div>
+
+      <div
+        class="absolute -left-40 top-1/4 h-[32rem] w-[32rem] rounded-full opacity-25 blur-[110px]"
+        style="background: radial-gradient(circle, var(--color-brand) 0%, transparent 70%)"
+      ></div>
+    </div>
+
+    <div class="container-page relative pb-8 pt-16 sm:pt-24 lg:pb-14 lg:pt-28" data-hero>
+      <div class="grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
+        <div>
+          <p class="eyebrow" data-hero-item="fade">
+            Live now · {total} upcoming {total === 1 ? 'event' : 'events'}
+          </p>
+
+          <h1 class="display display-hero mt-6 text-[var(--color-ink)]">
+            <span class="block overflow-hidden pb-[0.06em]" data-hero-item="mask">
+              <span class="block" data-hero-line>Events</span>
+            </span>
+            <span class="block overflow-hidden pb-[0.06em]" data-hero-item="mask">
+              <span class="block" data-hero-line>that move</span>
+            </span>
+            <span class="block overflow-hidden pb-[0.06em]" data-hero-item="mask">
+              <span class="block text-gradient" data-hero-line>people.</span>
+            </span>
+          </h1>
+
+          <p
+            class="measure mt-7 text-base leading-relaxed text-[var(--color-ink-muted)] sm:text-lg"
+            data-hero-item="up"
+          >
+            Discover, register and host events for communities, companies and creators. Every
+            ticket is a real reservation, every seat is counted once, and every door is scanned.
+          </p>
+
+          <div class="mt-9 flex flex-wrap items-center gap-3" data-hero-item="up">
+            <a href="/events" class="btn btn-primary btn-lg">
+              Browse events
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+            <a href="/dashboard" class="btn btn-secondary btn-lg">Organize an event</a>
+          </div>
+
+          <div class="mt-12 flex flex-wrap items-center gap-x-6 gap-y-2" data-hero-item="fade">
+            {
+              disciplines.map((discipline, index) => (
+                <>
+                  {index > 0 && <span class="text-[var(--color-ink-faint)]" aria-hidden="true">·</span>}
+                  <span class="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-[var(--color-ink-faint)]">
+                    {discipline}
+                  </span>
+                </>
+              ))
+            }
+          </div>
+        </div>
+
+        <!-- Floating detail card: a real event, not decoration. -->
+        {
+          lead && (
+            <div class="hidden lg:block" data-hero-item="up">
+              <a
+                href={`/events/${lead.slug}`}
+                class="group block rounded-[var(--radius-card)] border border-[var(--color-line-strong)] bg-[color-mix(in_srgb,var(--color-surface)_78%,transparent)] p-5 backdrop-blur-xl transition-colors hover:border-[var(--color-brand-accent)]"
+              >
+                <div class="flex items-center justify-between gap-3">
+                  <p class="eyebrow-plain">Next up</p>
+                  <span class="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[var(--color-neon)]">
+                    {lead.format === 'online' ? 'Online' : lead.format === 'hybrid' ? 'Hybrid' : 'In person'}
+                  </span>
+                </div>
+
+                <p class="display display-md mt-4 text-[var(--color-ink)]">{lead.title}</p>
+
+                <div class="mt-4 space-y-1.5 text-[0.8125rem] text-[var(--color-ink-muted)]">
+                  <p>{featured[0]?.venueName ?? 'Online'}{featured[0]?.city ? `, ${featured[0].city}` : ''}</p>
+                  <p>
+                    {featured[0]?.remainingTickets !== null && featured[0]?.remainingTickets !== undefined
+                      ? `${featured[0].remainingTickets} seats remaining`
+                      : 'Registration open'}
+                  </p>
+                </div>
+
+                <div class="mt-5 flex items-center justify-between border-t border-[var(--color-line)] pt-4">
+                  <span class="text-sm font-semibold">
+                    {featured[0]?.cheapestPriceMinor === 0
+                      ? 'Free'
+                      : featured[0]?.cheapestPriceMinor != null
+                        ? `From ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: featured[0].currency ?? site.defaultCurrency }).format(featured[0].cheapestPriceMinor / 100)}`
+                        : 'See details'}
+                  </span>
+                  <span class="text-[0.75rem] font-medium text-[var(--color-brand-accent)] transition-transform duration-300 group-hover:translate-x-1">
+                    Register →
+                  </span>
+                </div>
+              </a>
+            </div>
+          )
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Featured events ───────────────────────────────────────────────────── -->
+  <section class="container-page mt-6 pb-8 sm:mt-10">
+    <div class="mb-6 flex flex-wrap items-end justify-between gap-4" data-reveal="up">
+      <div>
+        <p class="eyebrow">Featured</p>
+        <h2 class="display display-lg mt-3 text-[var(--color-ink)]">Upcoming events</h2>
+      </div>
+
+      {
+        total > 0 && (
+          <a
+            href="/events"
+            class="group inline-flex items-center gap-2 text-sm font-medium text-[var(--color-ink-muted)] transition-colors hover:text-[var(--color-ink)]"
+          >
+            View all {total}
+            <span class="transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true">→</span>
+          </a>
+        )
+      }
+    </div>
+
+    {
+      featured.length === 0 ? (
+        <div class="card p-10 text-center" data-reveal="up">
+          <p class="display display-md">Nothing on sale yet</p>
+          <p class="mt-2 text-sm text-[var(--color-ink-muted)]">
+            Published events appear here automatically.
+          </p>
+        </div>
+      ) : (
+        <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" data-stagger="0.09">
+          {featured.map((row) => (
+            <EventCard
+              event={row.event}
+              venueName={row.venueName}
+              city={row.city}
+              remainingTickets={row.remainingTickets}
+              cheapestPriceMinor={row.cheapestPriceMinor}
+              currency={row.currency}
+            />
+          ))}
+        </div>
+      )
+    }
+  </section>
+
+  <!-- ── Why it holds up ──────────────────────────────────────────────────── -->
+  <section class="container-page mt-20">
+    <div class="rule mb-14"></div>
+
+    <div class="grid gap-10 sm:grid-cols-3" data-stagger="0.1">
+      <div data-reveal="up">
+        <p class="display display-md text-[var(--color-brand-accent)]">01</p>
+        <h3 class="mt-3 text-base font-semibold">Capacity, counted once</h3>
+        <p class="mt-2 text-sm leading-relaxed text-[var(--color-ink-muted)]">
+          Inventory is enforced by the database, so the last seat is sold exactly once — even when
+          a dozen people reach checkout at the same moment.
+        </p>
+      </div>
+
+      <div data-reveal="up">
+        <p class="display display-md text-[var(--color-brand-accent)]">02</p>
+        <h3 class="mt-3 text-base font-semibold">Tickets that scan once</h3>
+        <p class="mt-2 text-sm leading-relaxed text-[var(--color-ink-muted)]">
+          Each ticket carries a unique QR credential. Duplicate, void and wrong-event scans are
+          refused at the door, and every attempt is recorded.
+        </p>
+      </div>
+
+      <div data-reveal="up">
+        <p class="display display-md text-[var(--color-brand-accent)]">03</p>
+        <h3 class="mt-3 text-base font-semibold">Money you can trace</h3>
+        <p class="mt-2 text-sm leading-relaxed text-[var(--color-ink-muted)]">
+          Orders, payments and refunds are separate records. Partial refunds, failed attempts and
+          delayed confirmations all leave a trail you can follow.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Closing CTA ──────────────────────────────────────────────────────── -->
+  <section class="container-page mt-20">
+    <div class="relative overflow-hidden rounded-[1.5rem] border border-[var(--color-line)]" data-reveal="scale">
+      <div class="absolute inset-0 -z-10" aria-hidden="true">
+        <EventArtwork slug="organizer-cta" category={null} variant="banner" class="h-full w-full" />
+        <div class="absolute inset-0 bg-[#05070d]/70"></div>
+      </div>
+
+      <div class="relative px-6 py-14 sm:px-12 sm:py-20">
+        <p class="eyebrow">For organizers</p>
+        <h2 class="display display-xl mt-4 max-w-2xl text-white">
+          Run the room.<br />Not the spreadsheets.
+        </h2>
+        <p class="measure mt-5 text-sm leading-relaxed text-white/70 sm:text-base">
+          Publish an event, configure ticket categories, watch inventory move in real time, issue
+          refunds and scan people in — from one dashboard.
+        </p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="/dashboard" class="btn btn-primary btn-lg">Open the dashboard</a>
+          <a href="/policies/contact" class="btn btn-secondary btn-lg">Talk to us</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {totalTickets > 0 && <span class="sr-only">{totalTickets} seats currently available</span>}
+</PublicLayout>
