@@ -18,6 +18,7 @@ import { eventsId } from '@/lib/db/sql';
 import { ConflictError, ForbiddenError, NotFoundError } from '@/lib/security/errors';
 import { recordAudit } from '@/features/audit/service';
 import { availableQuantity, isWithinSalesWindow } from '@/features/inventory/service';
+import { deleteObject, resolveCoverImageUrl } from '@/lib/storage/object-storage';
 
 /**
  * Events service.
@@ -51,6 +52,8 @@ export interface EventInput {
   description?: string | null;
   category?: string | null;
   coverImageUrl?: string | null;
+  /** Key of an image uploaded to object storage; see `coverImageUrl` for the fallback. */
+  coverImageKey?: string | null;
   format: 'in_person' | 'online' | 'hybrid';
   visibility: 'public' | 'private';
   timezone: string;
@@ -117,6 +120,7 @@ export async function createEvent(
         description: input.description ?? null,
         category: input.category ?? null,
         coverImageUrl: input.coverImageUrl ?? null,
+        coverImageKey: input.coverImageKey ?? null,
         format: input.format,
         visibility: input.visibility,
         status: 'draft',
@@ -293,6 +297,7 @@ export async function updateEvent(
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.category !== undefined ? { category: input.category } : {}),
         ...(input.coverImageUrl !== undefined ? { coverImageUrl: input.coverImageUrl } : {}),
+        ...(input.coverImageKey !== undefined ? { coverImageKey: input.coverImageKey } : {}),
         format,
         ...(input.visibility !== undefined ? { visibility: input.visibility } : {}),
         ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
@@ -310,6 +315,19 @@ export async function updateEvent(
       .returning();
 
     if (!updated) throw new Error('Failed to update event');
+
+    /**
+     * Replacing a cover leaves the previous object behind otherwise, and nothing
+     * would ever point at it again. Best effort: a storage failure must not undo
+     * an update that has already been written.
+     */
+    if (existing.coverImageKey && existing.coverImageKey !== updated.coverImageKey) {
+      try {
+        await deleteObject(existing.coverImageKey);
+      } catch (error) {
+        console.error('Failed to remove the replaced cover image', error);
+      }
+    }
 
     if (input.location !== undefined || input.format !== undefined) {
       await upsertVenue(tx, eventId, {
@@ -517,6 +535,23 @@ export async function completePastEvents(): Promise<number> {
 }
 
 /**
+ * Swaps an uploaded cover's key for a signed URL.
+ *
+ * Done on the way out of the service rather than in each component: every page
+ * that renders an event cover then receives a ready-to-use URL, and the stored
+ * key stays the single source of truth. The signature expires in hours, so it is
+ * minted per response and never persisted.
+ */
+async function withCoverUrl<
+  T extends { coverImageKey: string | null; coverImageUrl: string | null },
+>(row: T): Promise<T> {
+  if (!row.coverImageKey) return row;
+
+  const url = await resolveCoverImageUrl(row.coverImageKey, row.coverImageUrl);
+  return { ...row, coverImageUrl: url };
+}
+
+/**
  * Public event listing.
  *
  * Only published, public events are ever returned. `from`/`to` filter on the
@@ -586,11 +621,14 @@ export async function listPublicEvents(
   return {
     // Aggregates arrive as strings from the driver; coerce at the boundary so
     // callers can compare them as numbers.
-    rows: rows.map((row) => ({
-      ...row,
-      remainingTickets: toNumber(row.remainingTickets),
-      cheapestPriceMinor: toNullableNumber(row.cheapestPriceMinor),
-    })),
+    rows: await Promise.all(
+      rows.map(async (row) => ({
+        ...row,
+        event: await withCoverUrl(row.event),
+        remainingTickets: toNumber(row.remainingTickets),
+        cheapestPriceMinor: toNullableNumber(row.cheapestPriceMinor),
+      })),
+    ),
     total: toNumber(totals?.value),
   };
 }
@@ -669,7 +707,7 @@ export async function getPublicEventBySlug(slug: string): Promise<PublicEventDet
   const now = new Date();
 
   return {
-    event: row,
+    event: await withCoverUrl(row),
     location: location ?? null,
     access: access ?? null,
     sessions,
@@ -757,13 +795,16 @@ export async function listOrganizationEvents(filters: {
   const [totals] = await db().select({ value: count() }).from(events).where(where);
 
   return {
-    rows: rows.map((row) => ({
-      ...row,
-      sold: toNumber(row.sold),
-      capacity: toNumber(row.capacity),
-      orders: toNumber(row.orders),
-      revenueMinor: toNumber(row.revenueMinor),
-    })),
+    rows: await Promise.all(
+      rows.map(async (row) => ({
+        ...row,
+        event: await withCoverUrl(row.event),
+        sold: toNumber(row.sold),
+        capacity: toNumber(row.capacity),
+        orders: toNumber(row.orders),
+        revenueMinor: toNumber(row.revenueMinor),
+      })),
+    ),
     total: toNumber(totals?.value),
   };
 }
@@ -819,7 +860,7 @@ export async function getEventEditorData(eventId: string, organizationId: string
     .orderBy(asc(ticketTypes.sortOrder), asc(ticketTypes.createdAt));
 
   return {
-    event,
+    event: await withCoverUrl(event),
     location: location ?? null,
     access: access ?? null,
     sessions,

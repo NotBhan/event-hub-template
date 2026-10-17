@@ -33,6 +33,12 @@ export const events = pgTable(
     description: text('description'),
     category: text('category'),
     coverImageUrl: text('cover_image_url'),
+    /**
+     * Key of an uploaded cover in object storage, when the organizer uploaded one
+     * instead of linking an image. Both are kept: the upload is authoritative
+     * while it exists, and the external URL remains the fallback.
+     */
+    coverImageKey: text('cover_image_key'),
 
     format: eventFormatEnum('format').notNull().default('in_person'),
     visibility: eventVisibilityEnum('visibility').notNull().default('public'),

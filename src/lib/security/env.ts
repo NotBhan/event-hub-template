@@ -42,6 +42,13 @@ const envSchema = z
       ),
     DATABASE_MIGRATION_URL: z.string().optional(),
 
+    /**
+     * Object storage bucket for uploaded event artwork. The S3 credentials and
+     * endpoint themselves stay under their AWS-standard names so the AWS SDK
+     * resolves them from the environment without being handed anything.
+     */
+    S3_BUCKET: z.string().default('assets'),
+
     BETTER_AUTH_SECRET: z
       .string()
       .min(32, 'BETTER_AUTH_SECRET must be at least 32 characters long'),

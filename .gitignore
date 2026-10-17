@@ -39,3 +39,4 @@ screenshots/
 
 # Vercel build output
 .vercel/
+.neon

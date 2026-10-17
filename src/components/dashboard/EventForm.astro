@@ -17,6 +17,8 @@ interface Props {
     description: string | null;
     category: string | null;
     coverImageUrl: string | null;
+    /** Present once an image has been uploaded; an id is needed to upload one. */
+    coverImageKey?: string | null;
     format: 'in_person' | 'online' | 'hybrid';
     visibility: 'public' | 'private';
     timezone: string;
@@ -163,6 +165,40 @@ const selectedTimezone = value('timezone', timezone);
             value={value('coverImageUrl', event?.coverImageUrl)}
           />
           {errors.coverImageUrl && <p class="help-text text-red-700">{errors.coverImageUrl}</p>}
+
+          {/*
+            Uploading needs something to attach the image to. The key is namespaced
+            by event id and checked against the caller's organization, so the
+            control appears once the draft exists.
+          */}
+          {event ? (
+            <div class="mt-3" data-cover-uploader data-event-id={event.id}>
+              <label class="label" for="coverImageFile">
+                Upload cover image
+              </label>
+              <input
+                id="coverImageFile"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                class="input"
+                data-cover-file
+              />
+              <input
+                type="hidden"
+                name="coverImageKey"
+                value={value('coverImageKey', event.coverImageKey)}
+                data-cover-key
+              />
+              <p class="help-text" data-cover-status>
+                PNG, JPEG or WebP up to 5MB. An upload takes precedence over the URL above.
+              </p>
+              {errors.coverImageKey && <p class="help-text text-red-700">{errors.coverImageKey}</p>}
+            </div>
+          ) : (
+            <p class="help-text">
+              Save this draft first to upload an image — uploads are attached to an event.
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -549,4 +585,48 @@ const selectedTimezone = value('timezone', timezone);
 
   formatSelect?.addEventListener('change', sync);
   sync();
+
+  /**
+   * Cover image upload.
+   *
+   * The image goes to object storage as soon as it is chosen and the resulting
+   * key is what the form submits; the form itself never carries the bytes, so a
+   * large image cannot make saving the event fail. Nothing is uploaded on the
+   * create page, where there is no event for the image to belong to yet.
+   */
+  const uploader = document.querySelector<HTMLElement>('[data-cover-uploader]');
+  const fileInput = document.querySelector<HTMLInputElement>('[data-cover-file]');
+  const keyInput = document.querySelector<HTMLInputElement>('[data-cover-key]');
+  const coverStatus = document.querySelector<HTMLElement>('[data-cover-status]');
+  const eventId = uploader?.dataset.eventId;
+
+  fileInput?.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    if (!file || !keyInput || !coverStatus || !eventId) return;
+
+    const idleText = coverStatus.textContent ?? '';
+    coverStatus.textContent = `Uploading ${file.name}…`;
+
+    const form = new FormData();
+    form.set('file', file);
+
+    try {
+      const response = await fetch(`/api/events/${eventId}/cover-image`, {
+        method: 'POST',
+        body: form,
+      });
+
+      const result = (await response.json()) as { key?: string; error?: string };
+
+      if (!response.ok || !result.key) {
+        coverStatus.textContent = result.error ?? 'The upload was rejected.';
+        return;
+      }
+
+      keyInput.value = result.key;
+      coverStatus.textContent = 'Uploaded. Save the event to apply it.';
+    } catch {
+      coverStatus.textContent = `Upload failed. ${idleText}`;
+    }
+  });
 </script>

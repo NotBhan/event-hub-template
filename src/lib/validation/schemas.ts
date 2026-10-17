@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isCoverImageKey } from '@/lib/storage/cover-image-key';
 
 /**
  * Request validation.
@@ -84,6 +85,19 @@ export const eventFormSchema = z
     description: optionalString(20000),
     category: optionalString(60),
     coverImageUrl: optionalUrl('Enter a full image URL'),
+    /**
+     * Key of an image uploaded to object storage, filled in by the upload in the
+     * event form. Only a key in the shape this application issues is accepted, so
+     * a crafted submission cannot point the event at another event's object.
+     */
+    coverImageKey: z
+      .union([z.string().trim().max(200), z.literal(''), z.null()])
+      .optional()
+      .refine(
+        (value) => value === undefined || value === null || value === '' || isCoverImageKey(value),
+        'That cover image reference is not valid — upload it again',
+      )
+      .transform((value) => (value === null || value === '' ? undefined : value)),
     format: z.enum(['in_person', 'online', 'hybrid']),
     visibility: z.enum(['public', 'private']),
     timezone: z.string().trim().min(1, 'Choose a timezone').max(64),

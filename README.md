@@ -399,6 +399,40 @@ Notes specific to Vercel:
   worker described below. Without one, abandoned checkouts keep holding stock and
   queued email is never sent.
 
+### Neon
+
+The project ships a [`neon.ts`](./neon.ts) that declares which Neon services a
+branch should have — Postgres, and an `assets` bucket for uploaded event artwork.
+
+```bash
+npx neon@latest init -y --org-id <org-id> --project-id <project-id> --branch production
+npx neon@latest deploy          # provisions the declared buckets, then pulls env vars
+```
+
+`neon init` writes four things into `.env` (or your platform's environment
+variables):
+
+| Variable | Used for |
+| --- | --- |
+| `DATABASE_URL` | The **pooled** endpoint. The app's runtime connection. |
+| `DATABASE_URL_UNPOOLED` | The direct endpoint. Drizzle Kit applies migrations through it, because PgBouncer will not carry schema changes. |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Object storage credentials. |
+| `AWS_ENDPOINT_URL_S3` / `AWS_REGION` | Bucket endpoint and region. |
+
+Then apply the schema and provision:
+
+```bash
+npm run db:migrate              # uses DATABASE_URL_UNPOOLED
+npm run provision               # organization + owner account
+npm run seed                    # optional demo data
+```
+
+Object storage is optional. Without it the cover image URL field still works and
+the upload control reports that storage is not configured; everything else runs
+unchanged. Uploaded covers are stored as objects and the database keeps the key,
+so a read URL is signed per request rather than stored — a stored signature would
+expire and leave broken images behind.
+
 ### Docker
 
 `Dockerfile` builds the Astro Node server as an unprivileged user; `docker-compose.yml`

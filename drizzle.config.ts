@@ -3,7 +3,15 @@ import { loadEnvFile } from './src/lib/security/env-file';
 
 loadEnvFile();
 
-const url = process.env.DATABASE_MIGRATION_URL ?? process.env.DATABASE_URL;
+/**
+ * Migrations never run through a pooler: PgBouncer will not carry the schema
+ * changes, which is why `neon init` pulls an unpooled URL alongside the pooled
+ * runtime one. Fall back to `DATABASE_URL` for a single-account local database.
+ */
+const url =
+  process.env.DATABASE_MIGRATION_URL ??
+  process.env.DATABASE_URL_UNPOOLED ??
+  process.env.DATABASE_URL;
 
 if (!url) {
   throw new Error('Set DATABASE_MIGRATION_URL or DATABASE_URL before running drizzle-kit');
