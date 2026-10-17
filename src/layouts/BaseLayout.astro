@@ -33,9 +33,7 @@ const pageTitle = title ? `${title} · ${brandName}` : `${brandName} · ${site.t
  * stylesheet resolves `var(--brand-primary)`, so this one value reaches both
  * themes without a rebuild.
  */
-const brandVars = branding?.primaryColor
-  ? `--brand-primary: ${branding.primaryColor};`
-  : '';
+const brandVars = branding?.primaryColor ? `--brand-primary: ${branding.primaryColor};` : '';
 
 const themeColor = branding?.primaryColor || site.colors.primary;
 ---
@@ -75,11 +73,7 @@ const themeColor = branding?.primaryColor || site.colors.primary;
       crossorigin
     />
 
-    {
-      brandVars && (
-        <style is:inline set:html={`:root { ${brandVars} }`} />
-      )
-    }
+    {brandVars && <style is:inline set:html={`:root { ${brandVars} }`} />}
 
     <!--
       Motion bootstrap.
@@ -119,9 +113,9 @@ const themeColor = branding?.primaryColor || site.colors.primary;
 
 <script>
   /**
-   * The motion engine is loaded on every page. It is a single module that owns
-   * all timelines, so components opt in with data attributes instead of each
-   * importing an animation library.
+   * Loads the animation engine only on pages that actually animate something.
+   * See `src/lib/motion/boot.ts` — pages with no motion attributes ship no
+   * animation code at all.
    */
-  import '@/lib/motion/engine';
+  import '@/lib/motion/boot';
 </script>

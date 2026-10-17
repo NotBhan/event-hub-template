@@ -137,3 +137,47 @@ test.describe('motion lifecycle', () => {
     await expect(page.getByRole('heading', { name: 'Upcoming events' })).toBeVisible();
   });
 });
+
+test.describe('animation budget', () => {
+  test('loads the animation engine only where there is something to animate', async ({ page }) => {
+    const animationRequests: string[] = [];
+
+    page.on('request', (request) => {
+      const url = request.url();
+      if (/gsap|anime/i.test(url)) animationRequests.push(url);
+    });
+
+    // The login screen has no hero, no reveals and no counters.
+    await page.goto('/login', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(800);
+
+    expect(animationRequests).toEqual([]);
+  });
+
+  test('loads the engine on a page that does animate', async ({ page }) => {
+    const animationRequests: string[] = [];
+
+    page.on('request', (request) => {
+      const url = request.url();
+      if (/gsap|anime/i.test(url)) animationRequests.push(url);
+    });
+
+    await page.goto('/', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(1200);
+
+    expect(animationRequests.length).toBeGreaterThan(0);
+  });
+
+  test('does not load the camera library until the scanner is started', async ({ page }) => {
+    const scannerRequests: string[] = [];
+
+    page.on('request', (request) => {
+      if (/zxing/i.test(request.url())) scannerRequests.push(request.url());
+    });
+
+    await page.goto('/dashboard', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(600);
+
+    expect(scannerRequests).toEqual([]);
+  });
+});
