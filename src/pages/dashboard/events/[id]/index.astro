@@ -52,6 +52,10 @@ const editResult = Astro.getActionResult(actions.updateEvent);
 const editData = editResult?.data;
 const editErrors = editData && !editData.ok ? (editData.fieldErrors ?? {}) : {};
 const editValues = editData && !editData.ok ? (editData.values ?? {}) : {};
+/** The confirmation to show, and only when the update actually succeeded. */
+const editSucceeded = editData?.ok ? editData.message : null;
+/** A refused save: the settings section opens so the reason is not hidden. */
+const hasEditErrors = Object.keys(editErrors).length > 0;
 
 const statusResult = Astro.getActionResult(actions.setEventStatus);
 const ticketResult = Astro.getActionResult(actions.saveTicketType);
@@ -115,6 +119,12 @@ const isPast = event.endsAt < new Date();
       )}
     </div>
   </div>
+
+  {editSucceeded && (
+    <p class="mb-6 rounded-[var(--radius-card)] border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+      {editSucceeded}
+    </p>
+  )}
 
   {statusResult?.data && (
     <p
@@ -473,7 +483,12 @@ const isPast = event.endsAt < new Date();
 
   {canEdit && (
     <section class="mb-6">
-      <details class="card p-5">
+      {/*
+        Open when a save was refused. The form's own error messages are inside it,
+        and a collapsed section would hide exactly the explanation someone came
+        back to the page for.
+      */}
+      <details class="card p-5" open={hasEditErrors}>
         <summary class="cursor-pointer font-medium">Event settings</summary>
         <div class="mt-5">
           <EventForm

@@ -5,6 +5,7 @@ import {
   eventLocations,
   eventSessions,
   events,
+  orders,
   organizationSettings,
   ticketTypes,
   type Event,
@@ -13,12 +14,14 @@ import {
   type EventSession,
 } from '@/lib/db/schema';
 import type { DbExecutor } from '@/lib/db/types';
+import { postgresErrorCode } from '@/lib/db/errors';
 import { toNumber, toNullableNumber } from '@/lib/db/scalars';
 import { eventsId } from '@/lib/db/sql';
 import { ConflictError, ForbiddenError, NotFoundError } from '@/lib/security/errors';
 import { recordAudit } from '@/features/audit/service';
 import { availableQuantity, isWithinSalesWindow } from '@/features/inventory/service';
-import { deleteObject, resolveCoverImageUrl } from '@/lib/storage/object-storage';
+import { attemptObjectCleanup, queueObjectDeletion } from '@/features/storage/service';
+import { resolveCoverImageUrl } from '@/lib/storage/object-storage';
 
 /**
  * Events service.
@@ -54,6 +57,14 @@ export interface EventInput {
   coverImageUrl?: string | null;
   /** Key of an image uploaded to object storage; see `coverImageUrl` for the fallback. */
   coverImageKey?: string | null;
+  /**
+   * Clear the cover entirely, whatever else is submitted with it.
+   *
+   * Removal lives here rather than in the form action because it decides the fate
+   * of an object: a key submitted alongside this flag is one the event no longer
+   * refers to, and something has to delete it.
+   */
+  removeCoverImage?: boolean;
   format: 'in_person' | 'online' | 'hybrid';
   visibility: 'public' | 'private';
   timezone: string;
@@ -271,7 +282,10 @@ export async function updateEvent(
   input: Partial<EventInput>,
   actorUserId: string | null,
 ): Promise<Event> {
-  return db().transaction(async (tx) => {
+  /** Objects this update stopped referring to, if any; deleted after commit. */
+  const unreferencedCoverKeys: string[] = [];
+
+  const updated = await db().transaction(async (tx) => {
     const existing = await assertEventAccess(eventId, organizationId);
 
     const startsAt = input.startsAt ?? existing.startsAt;
@@ -289,6 +303,16 @@ export async function updateEvent(
 
     const format = input.format ?? existing.format;
 
+    /**
+     * What the cover columns should hold afterwards. Removal overrides whatever
+     * key arrived with it: the organizer asked for no cover, so a key submitted in
+     * the same request is an upload the event will not refer to — and one that has
+     * to be cleaned up rather than quietly left in the bucket.
+     */
+    const removesCover = input.removeCoverImage === true;
+    const nextCoverKey = removesCover ? null : input.coverImageKey;
+    const nextCoverUrl = removesCover ? null : input.coverImageUrl;
+
     const [updated] = await tx
       .update(events)
       .set({
@@ -296,8 +320,8 @@ export async function updateEvent(
         ...(input.summary !== undefined ? { summary: input.summary } : {}),
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.category !== undefined ? { category: input.category } : {}),
-        ...(input.coverImageUrl !== undefined ? { coverImageUrl: input.coverImageUrl } : {}),
-        ...(input.coverImageKey !== undefined ? { coverImageKey: input.coverImageKey } : {}),
+        ...(nextCoverUrl !== undefined ? { coverImageUrl: nextCoverUrl } : {}),
+        ...(nextCoverKey !== undefined ? { coverImageKey: nextCoverKey } : {}),
         format,
         ...(input.visibility !== undefined ? { visibility: input.visibility } : {}),
         ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
@@ -317,16 +341,25 @@ export async function updateEvent(
     if (!updated) throw new Error('Failed to update event');
 
     /**
-     * Replacing a cover leaves the previous object behind otherwise, and nothing
-     * would ever point at it again. Best effort: a storage failure must not undo
-     * an update that has already been written.
+     * Every object this update left unreferenced: the cover that was stored, when
+     * the event no longer points at it, and any upload submitted together with a
+     * removal. The intent to delete each is recorded here, inside the transaction,
+     * so the row and the objects cannot drift apart — and carried out just after,
+     * so the ordinary case leaves nothing behind to sweep.
      */
-    if (existing.coverImageKey && existing.coverImageKey !== updated.coverImageKey) {
-      try {
-        await deleteObject(existing.coverImageKey);
-      } catch (error) {
-        console.error('Failed to remove the replaced cover image', error);
-      }
+    const unreferenced = new Set(
+      [existing.coverImageKey, removesCover ? input.coverImageKey : null]
+        .filter((key): key is string => Boolean(key))
+        .filter((key) => key !== updated.coverImageKey),
+    );
+
+    for (const key of unreferenced) {
+      await queueObjectDeletion(tx, {
+        key,
+        reason: updated.coverImageKey ? 'cover_replaced' : 'cover_removed',
+      });
+
+      unreferencedCoverKeys.push(key);
     }
 
     if (input.location !== undefined || input.format !== undefined) {
@@ -364,6 +397,15 @@ export async function updateEvent(
 
     return updated;
   });
+
+  /**
+   * Attempted only now that the update is committed. If the bucket refuses, the
+   * intents stay queued for the worker and this call still returns the saved
+   * event: an organizer's edit is not held hostage by object storage.
+   */
+  await Promise.all(unreferencedCoverKeys.map((key) => attemptObjectCleanup(key)));
+
+  return updated;
 }
 
 /** Publishes an event, refusing to go live without something to sell. */
@@ -518,6 +560,79 @@ export async function completeEvent(
     if (!updated) throw new Error('Failed to complete event');
     return updated;
   });
+}
+
+/** PostgreSQL's foreign-key violation code. */
+const FOREIGN_KEY_VIOLATION = '23503';
+
+/**
+ * Deletes an event and everything that hangs off it.
+ *
+ * Ownership is verified before anything irreversible happens: a caller who cannot
+ * see the event cannot destroy it, and the check runs inside the transaction that
+ * does the deleting.
+ *
+ * Financial records are what stop an event from being deleted. `orders` and
+ * `tickets` reference events with `onDelete: restrict`, so an event that has taken
+ * a registration cannot be removed — money must not vanish because a row did. That
+ * is reported as a conflict that tells the organizer what to do instead. The
+ * database's own refusal is caught too: reading rows to decide and then deleting
+ * are separate statements, and only the constraint is authoritative.
+ *
+ * A cover image is queued for deletion in the same transaction, so the row and its
+ * object are accounted for together even if the bucket is unreachable.
+ */
+export async function deleteEvent(
+  eventId: string,
+  organizationId: string,
+  actorUserId: string | null,
+): Promise<void> {
+  let unreferencedCoverKey: string | null = null;
+
+  try {
+    await db().transaction(async (tx) => {
+      const event = await assertEventAccess(eventId, organizationId);
+
+      const [registered] = await tx
+        .select({ value: count() })
+        .from(orders)
+        .where(eq(orders.eventId, eventId));
+
+      if (toNumber(registered?.value) > 0) {
+        throw new ConflictError(
+          'This event has registrations, so it cannot be deleted. Cancel it instead: cancelling stops new registrations and keeps the orders and tickets intact.',
+        );
+      }
+
+      if (event.coverImageKey) {
+        await queueObjectDeletion(tx, { key: event.coverImageKey, reason: 'event_deleted' });
+        unreferencedCoverKey = event.coverImageKey;
+      }
+
+      // Ticket types, venues, sessions, access details and check-in attempts all
+      // cascade from here. Orders never reach this point.
+      await tx.delete(events).where(eq(events.id, eventId));
+
+      await recordAudit(tx, {
+        organizationId,
+        actorUserId,
+        action: 'event.deleted',
+        resourceType: 'event',
+        resourceId: eventId,
+        metadata: { title: event.title, slug: event.slug, status: event.status },
+      });
+    });
+  } catch (error) {
+    if (postgresErrorCode(error) === FOREIGN_KEY_VIOLATION) {
+      throw new ConflictError(
+        'This event still has records attached to it, so it cannot be deleted. Cancel it instead.',
+      );
+    }
+
+    throw error;
+  }
+
+  if (unreferencedCoverKey) await attemptObjectCleanup(unreferencedCoverKey);
 }
 
 /**

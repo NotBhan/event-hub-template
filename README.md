@@ -302,7 +302,7 @@ it.
 
 ## Background work
 
-Three tasks, run by `workers/scheduler.ts` in the deployment:
+Four tasks, run by `workers/scheduler.ts` in the deployment:
 
 - **expire-orders** — releases inventory held by abandoned checkouts, and closes
   out finished events.
@@ -310,6 +310,12 @@ Three tasks, run by `workers/scheduler.ts` in the deployment:
   Messages are queued inside the transaction that confirmed the order, so a
   confirmed order always has its notification recorded, and a mail outage can
   never roll back a payment.
+- **process-object-cleanup** — removes cover images that stopped being referenced
+  when one was replaced, removed, or when its event was deleted. Like the outbox,
+  the intent is recorded inside the transaction that unreferenced the object and
+  the deletion is attempted immediately; this is what retries the ones that
+  failed, and what marks an object `abandoned` when storage never accepts the
+  deletion.
 - **reconcile-payments** — asks the provider about payments whose outcome is
   unknown: timeouts, delayed confirmations, and captures whose amount does not
   match the order. Recovered payments go through the same idempotent path a
@@ -323,10 +329,15 @@ Each is also runnable on its own, so any scheduler will do.
 npm test
 ```
 
-105 tests against a real PostgreSQL database — created, migrated and wiped by the
+147 tests against a real PostgreSQL database — created, migrated and wiped by the
 suite, so it never touches working data. Mocks are not used for the parts that
 matter: row locking, unique constraints and the partial index only exist in the
 database, so a mocked test would prove nothing.
+
+Object storage is the one exception, and only where a failure has to be provoked:
+no real bucket can be asked to refuse a delete on demand. The keys under test are
+still the ones the application issues, and the rows, transactions and retry state
+are real.
 
 The ones worth reading first:
 
@@ -394,10 +405,11 @@ Notes specific to Vercel:
   `VERCEL_URL` and `VERCEL_BRANCH_URL` automatically, so sign-in works on previews
   without extra configuration.
 - The background workers do **not** run on Vercel. Reservation expiry, email
-  delivery and payment reconciliation need a scheduler, such as a Vercel Cron
-  Job hitting a protected endpoint, a small always-on process, or the Docker
-  worker described below. Without one, abandoned checkouts keep holding stock and
-  queued email is never sent.
+  delivery, object cleanup and payment reconciliation need a scheduler, such as a
+  Vercel Cron Job hitting a protected endpoint, a small always-on process, or the
+  Docker worker described below. Without one, abandoned checkouts keep holding
+  stock, queued email is never sent, and a cover image whose deletion failed stays
+  in the bucket.
 
 ### Neon
 
@@ -432,6 +444,11 @@ the upload control reports that storage is not configured; everything else runs
 unchanged. Uploaded covers are stored as objects and the database keeps the key,
 so a read URL is signed per request rather than stored — a stored signature would
 expire and leave broken images behind.
+
+A cover object is removed when nothing points at it any more: replacing it,
+removing it from the editor, or deleting the event. "Remove the cover image"
+clears both the uploaded object and any linked URL, so the event falls back to its
+generated artwork.
 
 ### Docker
 

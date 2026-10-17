@@ -98,6 +98,16 @@ export const eventFormSchema = z
         'That cover image reference is not valid — upload it again',
       )
       .transform((value) => (value === null || value === '' ? undefined : value)),
+    /**
+     * Checkbox on the event form: drop the cover image entirely, uploaded object
+     * and linked URL alike. An unchecked box submits nothing at all, and a box
+     * that was toggled off can arrive as "off" or "false", so this reads the
+     * value through the same helper every other checkbox uses.
+     */
+    removeCoverImage: z
+      .union([z.string(), z.null()])
+      .optional()
+      .transform((value) => parseCheckbox(value)),
     format: z.enum(['in_person', 'online', 'hybrid']),
     visibility: z.enum(['public', 'private']),
     timezone: z.string().trim().min(1, 'Choose a timezone').max(64),

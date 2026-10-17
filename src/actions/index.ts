@@ -281,6 +281,9 @@ export const server = {
             category: parsed.data.category ?? null,
             coverImageUrl: parsed.data.coverImageUrl ?? null,
             coverImageKey: parsed.data.coverImageKey ?? null,
+            // The service decides what removal means — it also owns deleting the
+            // objects that stop being referenced.
+            removeCoverImage: parsed.data.removeCoverImage,
             format: parsed.data.format,
             visibility: parsed.data.visibility,
             timezone,

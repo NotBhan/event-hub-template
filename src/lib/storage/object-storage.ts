@@ -101,10 +101,43 @@ export async function signedCoverImageUrl(key: string): Promise<string | null> {
   });
 }
 
-/** Removes an object. A missing object is not an error: the goal is its absence. */
+/**
+ * Removes an object. A missing object is not an error: the goal is its absence.
+ *
+ * Throws when storage is not configured rather than returning quietly. "There is
+ * no bucket" and "the object is gone" are different facts, and only the second
+ * one means the cleanup is finished — a caller that treats them the same would
+ * discard real cleanup work the moment credentials were rotated.
+ */
 export async function deleteObject(key: string): Promise<void> {
-  if (!objectStorageConfigured()) return;
-  await s3().send(new DeleteObjectCommand({ Bucket: bucket(), Key: key }));
+  try {
+    await s3().send(new DeleteObjectCommand({ Bucket: bucket(), Key: key }));
+  } catch (error) {
+    if (isObjectMissing(error)) return;
+    throw error;
+  }
+}
+
+/**
+ * True when the provider says the object was not there.
+ *
+ * S3's DELETE is idempotent and answers 204 for a key that does not exist, but
+ * S3-compatible providers are not obliged to, and a key deleted by hand from a
+ * console is a normal event rather than a failure.
+ */
+export function isObjectMissing(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+
+  const candidate = error as {
+    name?: unknown;
+    code?: unknown;
+    $metadata?: { httpStatusCode?: unknown };
+  };
+
+  if (candidate.name === 'NoSuchKey' || candidate.name === 'NotFound') return true;
+  if (candidate.code === 'NoSuchKey' || candidate.code === 'NotFound') return true;
+
+  return candidate.$metadata?.httpStatusCode === 404;
 }
 
 /**

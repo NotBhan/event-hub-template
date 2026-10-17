@@ -18,6 +18,7 @@ export type AuditAction =
   | 'event.updated'
   | 'event.published'
   | 'event.cancelled'
+  | 'event.deleted'
   | 'ticket_type.created'
   | 'ticket_type.updated'
   | 'order.created'

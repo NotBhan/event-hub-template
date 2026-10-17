@@ -10,12 +10,17 @@
  * Usage:
  *   npm run seed          # add demo data if it is not already present
  *   npm run seed -- --reset   # remove existing demo events first
+ *
+ * `--reset` goes through `deleteEvent`, so it inherits the real rules: an event
+ * that has sold tickets cannot be deleted, only cancelled. Removing demo events
+ * that have registrations therefore reports a conflict rather than deleting the
+ * registrations to get its way.
  */
 import '../src/lib/security/load-env';
 import { eq } from 'drizzle-orm';
 import { closeDatabase, db } from '../src/lib/db/client';
 import { events, organization, user } from '../src/lib/db/schema';
-import { createEvent, publishEvent } from '../src/features/events/service';
+import { createEvent, deleteEvent, publishEvent } from '../src/features/events/service';
 import { createTicketType } from '../src/features/inventory/service';
 import { createOrder, confirmOrder } from '../src/features/orders/service';
 import { serverEnv } from '../src/lib/security/env';
@@ -55,8 +60,22 @@ async function main(): Promise<void> {
 
   if (reset) {
     for (const slug of demoSlugs) {
-      await db().delete(events).where(eq(events.slug, slug));
+      const [existing] = await db()
+        .select({ id: events.id })
+        .from(events)
+        .where(eq(events.slug, slug))
+        .limit(1);
+
+      if (!existing) continue;
+
+      try {
+        await deleteEvent(existing.id, org.id, actorUserId);
+      } catch (error) {
+        step(`Could not remove ${slug}: ${error instanceof Error ? error.message : String(error)}`);
+        throw error;
+      }
     }
+
     step('Removed previous demo events');
   }
 

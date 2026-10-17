@@ -78,6 +78,16 @@ const endsAt = value('endsAt', wallClock(event?.endsAt));
 const format = value('format', event?.format ?? 'in_person');
 const visibility = value('visibility', event?.visibility ?? 'public');
 const selectedTimezone = value('timezone', timezone);
+
+/**
+ * The cover the form is showing, and whether there is one at all.
+ *
+ * A stored key without a URL means storage could not sign one — the object still
+ * exists and must still be removable, so the two are checked separately rather
+ * than treating "no preview" as "no cover".
+ */
+const previewUrl = value('coverImageUrl', event?.coverImageUrl) || null;
+const hasCover = Boolean(previewUrl || event?.coverImageKey);
 ---
 
 <form method="POST" action={action} class="space-y-6">
@@ -193,6 +203,53 @@ const selectedTimezone = value('timezone', timezone);
                 PNG, JPEG or WebP up to 5MB. An upload takes precedence over the URL above.
               </p>
               {errors.coverImageKey && <p class="help-text text-red-700">{errors.coverImageKey}</p>}
+
+              {/*
+                The current cover, so "remove" is a decision about something the
+                organizer can see, and so the difference between an uploaded image
+                and a linked URL is visible before either is changed.
+              */}
+              {hasCover && (
+                <div
+                  class="mt-4 flex flex-wrap items-start gap-4 rounded-[var(--radius-card)] border border-[var(--color-line)] p-3"
+                  data-cover-current
+                >
+                  {previewUrl && (
+                    <img
+                      src={previewUrl}
+                      alt=""
+                      class="h-20 w-32 rounded object-cover"
+                      width="128"
+                      height="80"
+                    />
+                  )}
+
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium">
+                      {event.coverImageKey ? 'Uploaded image' : 'Linked image'}
+                    </p>
+                    <p class="help-text">
+                      {event.coverImageKey
+                        ? 'Stored in this deployment’s object storage.'
+                        : 'Fetched from another address.'}
+                    </p>
+
+                    <label class="mt-2 flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        name="removeCoverImage"
+                        value="on"
+                        class="h-4 w-4"
+                        data-cover-remove
+                      />
+                      Remove the cover image when saving
+                    </label>
+                    <p class="help-text" data-cover-remove-note hidden>
+                      The URL and upload fields are ignored while the cover is being removed.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <p class="help-text">
@@ -587,7 +644,7 @@ const selectedTimezone = value('timezone', timezone);
   sync();
 
   /**
-   * Cover image upload.
+   * Cover image upload and removal.
    *
    * The image goes to object storage as soon as it is chosen and the resulting
    * key is what the form submits; the form itself never carries the bytes, so a
@@ -598,11 +655,35 @@ const selectedTimezone = value('timezone', timezone);
   const fileInput = document.querySelector<HTMLInputElement>('[data-cover-file]');
   const keyInput = document.querySelector<HTMLInputElement>('[data-cover-key]');
   const coverStatus = document.querySelector<HTMLElement>('[data-cover-status]');
+  const removeToggle = document.querySelector<HTMLInputElement>('[data-cover-remove]');
+  const removeNote = document.querySelector<HTMLElement>('[data-cover-remove-note]');
+  const urlInput = document.querySelector<HTMLInputElement>('#coverImageUrl');
   const eventId = uploader?.dataset.eventId;
+
+  /**
+   * Removal and upload contradict each other, and the server rejects the pair
+   * when the key is one the event does not have yet. The controls mirror that
+   * rule here so the refusal is never something the organizer runs into.
+   */
+  const syncCoverIntent = () => {
+    const removing = removeToggle?.checked ?? false;
+
+    if (urlInput) urlInput.disabled = removing;
+    if (fileInput) fileInput.disabled = removing;
+    if (removeNote) removeNote.hidden = !removing;
+  };
+
+  removeToggle?.addEventListener('change', syncCoverIntent);
 
   fileInput?.addEventListener('change', async () => {
     const file = fileInput.files?.[0];
     if (!file || !keyInput || !coverStatus || !eventId) return;
+
+    // Choosing a file is a decision to have this image; it overrides removal.
+    if (removeToggle?.checked) {
+      removeToggle.checked = false;
+      syncCoverIntent();
+    }
 
     const idleText = coverStatus.textContent ?? '';
     coverStatus.textContent = `Uploading ${file.name}…`;
@@ -629,4 +710,6 @@ const selectedTimezone = value('timezone', timezone);
       coverStatus.textContent = `Upload failed. ${idleText}`;
     }
   });
+
+  syncCoverIntent();
 </script>

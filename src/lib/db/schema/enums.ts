@@ -82,3 +82,20 @@ export const webhookStatusEnum = pgEnum('webhook_status', [
   'failed',
   'ignored',
 ]);
+
+/**
+ * Object cleanup lifecycle.
+ *
+ * A queued deletion is either still waiting to succeed or has permanently given
+ * up; rows disappear on success, so the table holds outstanding work and nothing
+ * else. `abandoned` exists so a failure that outlasted its retries stays visible
+ * instead of being retried forever or dropped silently.
+ */
+export const objectCleanupStatusEnum = pgEnum('object_cleanup_status', ['pending', 'abandoned']);
+
+/** Why an object became unreferenced. Diagnostic only; recorded per row. */
+export const objectCleanupReasonEnum = pgEnum('object_cleanup_reason', [
+  'cover_replaced',
+  'cover_removed',
+  'event_deleted',
+]);

@@ -29,6 +29,13 @@
       "when": 1792252966651,
       "tag": "0003_smart_hammerhead",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792259857975,
+      "tag": "0004_simple_bishop",
+      "breakpoints": true
     }
   ]
 }

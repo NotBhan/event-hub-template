@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseRegistrationForm } from '@/lib/validation/registration';
+import { buildCoverImageKey } from '@/lib/storage/object-storage';
 import {
   emailSchema,
   eventFormSchema,
@@ -134,6 +135,55 @@ describe('field validation', () => {
     });
 
     expect(parsed.success).toBe(false);
+  });
+
+  describe('cover image fields', () => {
+    const base = {
+      title: 'Test Event',
+      format: 'in_person' as const,
+      visibility: 'public' as const,
+      timezone: 'Asia/Kolkata',
+      startsAt: '2026-05-01T10:00',
+      endsAt: '2026-05-01T18:00',
+      refundPolicy: 'no_refunds' as const,
+      venueName: 'Test Venue',
+    };
+
+    it('reads the removal checkbox the way browsers send it', () => {
+      const checked = eventFormSchema.parse({ ...base, removeCoverImage: 'on' });
+      expect(checked.removeCoverImage).toBe(true);
+
+      // An unchecked box submits nothing at all.
+      expect(eventFormSchema.parse({ ...base }).removeCoverImage).toBe(false);
+      expect(eventFormSchema.parse({ ...base, removeCoverImage: '' }).removeCoverImage).toBe(false);
+      expect(eventFormSchema.parse({ ...base, removeCoverImage: 'false' }).removeCoverImage).toBe(
+        false,
+      );
+    });
+
+    it('accepts a key the application could have issued', () => {
+      const key = buildCoverImageKey('240bf3e6-d7c1-4cff-9648-9843963a55c0', 'image/webp');
+      const parsed = eventFormSchema.safeParse({ ...base, coverImageKey: key });
+
+      expect(parsed.success).toBe(true);
+      if (parsed.success) expect(parsed.data.coverImageKey).toBe(key);
+    });
+
+    it('refuses a key it did not issue', () => {
+      for (const key of [
+        'events/240bf3e6-d7c1-4cff-9648-9843963a55c0/../../secrets.png',
+        'events/00000000-0000-4000-8000-000000000000/not-a-random-name.png',
+        'some-other-bucket-key',
+      ]) {
+        const parsed = eventFormSchema.safeParse({ ...base, coverImageKey: key });
+        expect(parsed.success).toBe(false);
+      }
+    });
+
+    it('treats an empty key as no key, so removing a cover is a plain submission', () => {
+      const parsed = eventFormSchema.parse({ ...base, coverImageKey: '' });
+      expect(parsed.coverImageKey).toBeUndefined();
+    });
   });
 });
 

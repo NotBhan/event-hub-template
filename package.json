@@ -20,6 +20,7 @@
     "seed": "tsx scripts/seed-demo.ts",
     "provision": "tsx scripts/provision-client.ts",
     "worker:expire-orders": "tsx workers/expire-orders.ts",
+    "worker:process-object-cleanup": "tsx workers/process-object-cleanup.ts",
     "worker:process-outbox": "tsx workers/process-outbox.ts",
     "worker:reconcile-payments": "tsx workers/reconcile-payments.ts",
     "test": "vitest run",
