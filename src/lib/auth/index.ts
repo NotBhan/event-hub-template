@@ -22,6 +22,23 @@ import { enqueueEmail } from '@/features/notifications/outbox';
 const env = serverEnv();
 const isProduction = env.NODE_ENV === 'production';
 
+/**
+ * Origins allowed to make auth requests.
+ *
+ * Beside the configured public URL, include the hosts Vercel assigns. A preview
+ * deployment has its own hostname, and without it a sign-in attempt from that URL
+ * is rejected as cross-origin even though it is the same application.
+ */
+function trustedOrigins(): string[] {
+  const hosts = [
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_BRANCH_URL,
+    process.env.VERCEL_URL,
+  ].filter((host): host is string => Boolean(host));
+
+  return [...new Set([env.PUBLIC_SITE_URL, ...hosts.map((host) => `https://${host}`)])];
+}
+
 export const auth = betterAuth({
   appName: site.name,
   baseURL: env.BETTER_AUTH_URL,
@@ -82,7 +99,7 @@ export const auth = betterAuth({
     },
   },
 
-  trustedOrigins: [env.PUBLIC_SITE_URL],
+  trustedOrigins: trustedOrigins(),
 
   plugins: [
     organization({

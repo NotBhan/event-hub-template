@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@astrojs/node": "^11.1.8",
+    "@astrojs/vercel": "^11.0.15",
     "@tailwindcss/vite": "^4.3.3",
     "@zxing/browser": "^0.2.1",
     "animejs": "^4.5.0",

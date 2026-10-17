@@ -14,12 +14,24 @@ loadEnvFile();
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+/**
+ * Canonical origin for this deployment.
+ *
+ * Vercel exposes the project's production domain and the per-deployment preview
+ * host. Using them as the default means a deployment works without duplicating
+ * the URL into configuration, while an explicit `PUBLIC_SITE_URL` always wins.
+ */
+function defaultSiteUrl(): string {
+  const host = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+  return host ? `https://${host}` : 'http://localhost:4321';
+}
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().positive().default(4321),
 
-    PUBLIC_SITE_URL: z.url().default('http://localhost:4321'),
+    PUBLIC_SITE_URL: z.url().default(defaultSiteUrl()),
 
     DATABASE_URL: z
       .string()
@@ -33,7 +45,7 @@ const envSchema = z
     BETTER_AUTH_SECRET: z
       .string()
       .min(32, 'BETTER_AUTH_SECRET must be at least 32 characters long'),
-    BETTER_AUTH_URL: z.url().default('http://localhost:4321'),
+    BETTER_AUTH_URL: z.url().default(defaultSiteUrl()),
 
     /**
      * Keys the derivation of ticket QR credentials. Held outside the database on
@@ -44,6 +56,16 @@ const envSchema = z
       .min(32, 'TICKET_TOKEN_SECRET must be at least 32 characters long'),
 
     PAYMENT_PROVIDER: z.enum(['razorpay', 'simulated']).default('simulated'),
+    /**
+     * Explicit opt-in for running the simulated gateway in a production
+     * environment. Intended only for a hosted demo — a real installation uses a
+     * live provider. Parsed from the string rather than coerced, because
+     * `z.coerce.boolean()` treats the string "false" as true.
+     */
+    ALLOW_SIMULATED_PAYMENTS: z
+      .string()
+      .optional()
+      .transform((value) => value === 'true'),
     RAZORPAY_KEY_ID: z.string().optional(),
     RAZORPAY_KEY_SECRET: z.string().optional(),
     RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
@@ -92,11 +114,13 @@ const envSchema = z
       });
     }
 
-    if (isProduction && env.PAYMENT_PROVIDER === 'simulated') {
+    if (isProduction && env.PAYMENT_PROVIDER === 'simulated' && !env.ALLOW_SIMULATED_PAYMENTS) {
       ctx.addIssue({
         code: 'custom',
         path: ['PAYMENT_PROVIDER'],
-        message: 'The simulated payment provider must not be used in production',
+        message:
+          'The simulated payment provider must not be used in production. ' +
+          'Use a live provider, or set ALLOW_SIMULATED_PAYMENTS=true for a labelled demo deployment.',
       });
     }
 

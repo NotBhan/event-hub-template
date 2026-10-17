@@ -341,6 +341,62 @@ The ones worth reading first:
 
 ## Deployment
 
+Two targets from the same commit. The adapter is chosen at build time from the
+environment, so nothing needs to be maintained in parallel.
+
+### Vercel
+
+Vercel sets `VERCEL=1` during its build, which switches Astro to the Vercel
+adapter and emits a serverless function. Without that branch a Vercel deployment
+receives a standalone Node server it cannot route, and **every page returns 404** —
+which is the most common way this project fails on Vercel.
+
+1. Import the repository as a Vercel project. Framework preset: **Astro**.
+2. Provision a hosted PostgreSQL database. Use a **pooled** connection string:
+   serverless functions open many short-lived connections, and a direct
+   (unpooled) URL will exhaust the server's connection limit.
+3. Set these environment variables for Production (and Preview if you want
+   previews to work):
+
+   | Variable | Required | Notes |
+   | --- | --- | --- |
+   | `DATABASE_URL` | yes | Pooled PostgreSQL URL reachable from Vercel |
+   | `BETTER_AUTH_SECRET` | yes | 32+ characters |
+   | `TICKET_TOKEN_SECRET` | yes | 32+ characters, different from the auth secret |
+   | `PUBLIC_SITE_URL` | recommended | `https://your-domain`; derived from Vercel's own domain variables when omitted |
+   | `BETTER_AUTH_URL` | recommended | Same as `PUBLIC_SITE_URL` |
+   | `PAYMENT_PROVIDER` | yes | `razorpay`, or `simulated` for a demo |
+   | `RAZORPAY_KEY_ID` / `_SECRET` / `_WEBHOOK_SECRET` | if Razorpay | Client's own merchant account |
+   | `EMAIL_PROVIDER` | yes | `smtp` for real delivery |
+   | `ALLOW_SIMULATED_PAYMENTS` | demo only | `true` is required for `simulated` under `NODE_ENV=production` |
+
+4. Apply the schema once, from a machine that can reach the database:
+
+   ```bash
+   DATABASE_MIGRATION_URL='<unpooled-url>' npx drizzle-kit migrate
+   npx tsx scripts/provision-client.ts --name "Client" --slug client --email owner@client.example
+   ```
+
+5. Point the payment provider's webhook at
+   `https://your-domain/api/payments/webhook`. Vercel serves it from the same
+   serverless function as the rest of the site; no separate route configuration
+   is needed.
+
+Notes specific to Vercel:
+
+- `NODE_ENV` is `production`, so the simulated provider is rejected unless
+  `ALLOW_SIMULATED_PAYMENTS=true`. That is deliberate: a demo must say so.
+- Vercel preview deployments get their own hostname. The auth layer trusts
+  `VERCEL_URL` and `VERCEL_BRANCH_URL` automatically, so sign-in works on previews
+  without extra configuration.
+- The background workers do **not** run on Vercel. Reservation expiry, email
+  delivery and payment reconciliation need a scheduler, such as a Vercel Cron
+  Job hitting a protected endpoint, a small always-on process, or the Docker
+  worker described below. Without one, abandoned checkouts keep holding stock and
+  queued email is never sent.
+
+### Docker
+
 `Dockerfile` builds the Astro Node server as an unprivileged user; `docker-compose.yml`
 runs the database, a migration job, the web process and the worker.
 

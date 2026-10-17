@@ -36,3 +36,6 @@ backups/
 
 # Local visual review captures
 screenshots/
+
+# Vercel build output
+.vercel/
